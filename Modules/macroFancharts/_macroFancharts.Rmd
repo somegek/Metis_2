@@ -1,0 +1,237 @@
+Macro Fan Charts {data-navmenu="Macro Modeling"}
+=====================================  
+
+```{r}
+
+shinyUI(
+  fluidPage(
+    navbarPage("",
+                 tabPanel(
+                 div(style="display: inline-block; align: center;",
+                     shinyWidgets::dropdown(label="Country", 
+                                            fluidRow( column(10,offset=0, 
+                                                             div(style = "",
+                                                                 tags$h4(""),
+                                                                 br(),
+                                                                 radioGroupButtons(inputId = "countryFanFilter", individual = T,
+                                                                                     choices=unique(macroDataTable$country), 
+                                                                                     selected = unique(macroDataTable$country)[1], checkIcon = list(yes = tags$i(class = "fa fa-circle", 
+                                                                                     style = "color: steelblue"), 
+                                                                                     no = tags$i(class = "fa fa-circle-o", 
+                                                                                     style = "color: steelblue")))))), 
+                                            circle = F, status = "primary", icon = icon("formula"),
+                                            width = "100px",tooltip = tooltipOptions(title = "Click to modify inputs")))),
+                       tabPanel(
+                 div(style="display: inline-block; align: center;",
+                     shinyWidgets::dropdown(label="Exposure", 
+                                            fluidRow( column(10,offset=0, 
+                                                             div(style = "",
+                                                                 tags$h4(""),
+                                                                 br(),
+                                                                 radioGroupButtons(inputId = 'ExposureFanFilter', individual = T,
+                                                                                     choices= unique(macroDataTable$AssetClass), 
+                                                                                     selected = unique(macroDataTable$AssetClass)[1], checkIcon = list(yes = tags$i(class = "fa fa-circle", 
+                                                                                     style = "color: steelblue"), 
+                                                                                     no = tags$i(class = "fa fa-circle-o", 
+                                                                                     style = "color: steelblue")))))), 
+                                            circle = F, status = "primary", icon = icon("formula"),
+                                            width = "170px",tooltip = tooltipOptions(title = "Click to modify inputs"))))
+#                 tabPanel(
+#           div(style="display: inline-block; align: center;",
+#                 shinyWidgets::dropdown(label=textOutput('tabsetCountryFan'), status = "primary",
+#          fluidRow(
+#           column(10,offset=0,
+#           div(style = "padding: 0px 0px; margin-left:0.1%",
+#           radioGroupButtons(inputId = "countryFanFilter", 
+#           label = "Country Selection", choices = unique(macroDataTable$country) , checkIcon = list(yes =tags$i(class = "fa fa-check-square", 
+#      style = "color: steelblue"), 
+#       no = tags$i(class = "fa fa-square-o", 
+#       style = "color: steelblue")))
+#   )))
+# )
+#   ,
+#     circle = F, status = "primary",
+#     icon = icon("time"),
+#     tooltip = tooltipOptions(title = "Click to modify inputs")
+# )),    
+# tabPanel(
+#           div(style="display: inline-block; align: center;",
+#                 shinyWidgets::dropdown(label=textOutput('tabsetExposureFan'), status = "primary",
+#          fluidRow(
+#           column(10,offset=0,
+#           div(style = "padding: 0px 0px; margin-left:0.1%",
+#           radioGroupButtons(inputId = "ExposureFanFilter", 
+#           label = "Exposure Type Selection", choices = unique(macroDataTable$AssetClass), checkIcon = list(yes =tags$i(class = "fa fa-check-square", 
+#      style = "color: steelblue"), 
+#       no = tags$i(class = "fa fa-square-o", 
+#       style = "color: steelblue")))
+#   )))
+# )
+#   ,
+#     circle = F, status = "primary",
+#     icon = icon("time"), width = "300px",
+#     tooltip = tooltipOptions(title = "Click to modify inputs")
+# ))
+)
+, 
+HTML("<script>var parent = document.getElementsByClassName('navbar-nav');
+parent[0].insertAdjacentHTML( 'afterend', '<ul class=\"nav navbar-nav navbar-right\"><li class=\"disabled\"><a href=\"#\">v0.1</a></li></ul>' );</script>")
+    ))
+ output$tabsetCountryFan <- renderText({
+      input$countryFanFilter
+    })
+       output$tabsetExposureFan <- renderText({
+      input$ExposureFanFilter
+    })
+
+```
+
+
+```{r}
+
+macromodelsConsidered <- reactive({
+ macroData <- macroDataTable[ AssetClass == input$ExposureFanFilter & country == input$countryFanFilter]
+ if(input$countryFanFilter == "US"& input$ExposureFanFilter=='Corporates') macroData <- macroData[sector == "Business"]
+ macroData <- macroData[, colSums(!is.na(macroData))>0, with = F]
+   variablesMacroForecast <- colnames(macroData)[grepl(pattern = 'Baseline',colnames(macroData))]
+   variablesMacroForecast <- variablesMacroForecast[!(grepl('sys',x = variablesMacroForecast) | grepl('PD',x = variablesMacroForecast)| grepl('F_',x = variablesMacroForecast)) ]
+   variablesMacroForecast <- str_sub(variablesMacroForecast, end = -10)
+   # variablesMacroForecast <- revalue(variablesMacroForecast, c(Commercial_RE_growth = "CRE_"))
+   # variablesMacroForecast <- revalue(variablesMacroForecast, c(UE_Rate_lag2 = "UEgr"))
+   # variablesMacroForecast <- revalue(variablesMacroForecast, c(UE_Rate_lag2 = "UEgr"))
+   
+   variablesMacroForecast[str_sub(string = variablesMacroForecast, start = 0,end = 2) == 'UE'] <- "UEgr"
+   variablesMacroForecast[str_sub(string = variablesMacroForecast, start = 0,end = 4) == 'X10Y'] <- "Treasury_10Y_Rate_"
+   variablesMacroForecast[str_sub(string = variablesMacroForecast, start = 0,end = 3) == 'X3M'] <- "Treasury_3M_Rate_"
+   variablesMacroForecast[str_sub(string = variablesMacroForecast, start = 0,end = 3) == 'CRE'] <- "CRE_"
+   variablesMacroForecast[grepl(pattern = 'Commercial', x = variablesMacroForecast)] <- "CRE_"
+   variablesMacroForecast[grepl(pattern = 'CRE', x = variablesMacroForecast)] <- "CREgr_"
+   variablesMacroForecast[grepl(pattern = 'RGDPgr', x = variablesMacroForecast)] <- "RGDP"
+   variablesMacroForecast[grepl(pattern = '3M', x = variablesMacroForecast)] <- "Treasury_3M_Rate_"
+   variablesMacroForecast[grepl(pattern = '10Y', x = variablesMacroForecast)] <- "Treasury_10Y_Rate_"
+   variablesMacroForecast[grepl(pattern = 'UE', x = variablesMacroForecast)] <- "UEgr"
+   variablesMacroForecast[grepl(pattern = 'HPI', x = variablesMacroForecast)] <- "HPI"
+
+  ## There is no fan chart for term spread as it is forecasted as difference of long and short term interest rates, therefore if term spread is one of the selected drivers we highlight long d #  ## short term rates
+ if(length(grep("Term_Spread", variablesMacroForecast))>0){
+  variablesMacroForecast <- variablesMacroForecast[-grep("Spread", variablesMacroForecast)]
+  variablesMacroForecast <- c(variablesMacroForecast, "Treasury_10Y_Rate_", "Treasury_3M_Rate_")
+ }
+countrySelected <- input$countryFanFilter
+for(i in 1:length(variablesMacroForecast)){
+    allPlots[[countrySelected]][[variablesMacroForecast[i]]]$x$hc_opts$subtitle$style$color <- "red"
+    allPlots[[countrySelected]][[variablesMacroForecast[i]]]$x$hc_opts$subtitle$text <- paste0(allPlots[[countrySelected]][[variablesMacroForecast[i]]]$x$hc_opts$subtitle$text ," (Selected)")
+      }
+  return(list(allPlots = allPlots[[input$countryFanFilter]]))
+
+  
+})
+```
+
+Row
+-----------------------------------------------
+
+
+### <span style="color:`r borderTextColor`"></span> {.bgred}
+```{r}
+
+renderHighchart({
+   macromodelsConsidered()$allPlots[[1]]#()$macroOutput  
+})
+
+```
+
+### <span style="color:`r borderTextColor`"></span> {.bgred}
+```{r}
+
+renderHighchart({
+   macromodelsConsidered()$allPlots[[2]]#()$macroOutput  
+})
+
+```
+
+### <span style="color:`r borderTextColor`"></span> {.bgred}
+```{r}
+
+renderHighchart({
+   macromodelsConsidered()$allPlots[[3]]#()$macroOutput  
+})
+
+```
+
+### <span style="color:`r borderTextColor`"></span> {.bgred}
+```{r}
+
+renderHighchart({
+   macromodelsConsidered()$allPlots[[4]]#()$macroOutput  
+})
+
+```
+
+
+Row
+-----------------------------------------------
+
+
+### <span style="color:`r borderTextColor`"></span> {.bgred}
+```{r}
+
+renderHighchart({
+   macromodelsConsidered()$allPlots[[5]]#()$macroOutput  
+})
+
+```
+
+### <span style="color:`r borderTextColor`"></span> {.bgred}
+```{r}
+
+renderHighchart({
+   macromodelsConsidered()$allPlots[[6]]#()$macroOutput  
+})
+
+```
+
+### <span style="color:`r borderTextColor`"></span> {.bgred}
+```{r}
+
+renderHighchart({
+   macromodelsConsidered()$allPlots[[7]]#()$macroOutput  
+})
+
+```
+
+### <span style="color:`r borderTextColor`"></span> {.bgred}
+```{r}
+
+renderHighchart({
+   macromodelsConsidered()$allPlots[[8]]#()$macroOutput  
+})
+
+```
+
+
+
+Row {data-width=100} 
+-------------------------------------
+
+### Date {.bgred}
+
+```{r}
+renderValueBox({
+  # &emsp is large white space in HTML
+  valueBox('', caption = paste0("<span style=color:", valueBoxTextColor, 
+                                "           &emsp;            ",
+                                "  ><b>Transaction</b>: ", names(unlist(selectionList)[input$transactionSelected == unlist(selectionList)]),
+                                "           &emsp;            ",
+                                "   <b>Basel Segment</b>: ", input$filterBaselSegment, 
+                                "           &emsp;            ",
+                                "   <b>Country</b>: ", paste0(input$filterCountry, collapse = ', '), 
+                                "           &emsp;            ",
+                                "   <b>Maturity Range</b>: ", input$filterMaturityMin, ' to ', input$filterMaturityMax,
+                                "           &emsp;            ",
+                                "   <b>RW B3IRA Range</b>: ", input$filterRWB3IRBA[1], ' to ', input$filterRWB3IRBA[2],
+                                "</span>"), 
+                        color = valueBoxColor)
+})
+```
+

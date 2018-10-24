@@ -1,0 +1,348 @@
+
+
+Balance Sheet Projections
+=====================================  
+
+```{r}
+shinyUI(
+  fluidPage(
+    navbarPage("",
+               tabPanel(
+                        div(style="display: inline-block; align: center;",shinyWidgets::dropdown(label = 'Scenario',
+                            fluidRow(
+                               column(10,offset=0,
+                                  div(style = "padding: 0px 0px; margin-left:0.1%",
+                                      tags$h4(""),
+                                      br(),
+                                      uiOutput(outputId = "scenarioBalanceSheetProjections"),
+                                      bsTooltip(id = "Scenario", title = "Scenario", placement = "top", trigger = "hover")
+                                  ))
+                          )
+                          ,
+                            circle = F, status = "primary",
+                            icon = icon("time"), width = "300px",
+                            tooltip = tooltipOptions(title = "Click to modify inputs")
+                          ))
+                        )
+               )
+           )
+) 
+
+output$scenarioBalanceSheetProjections <- renderUI({
+    tagList(
+      selectInput('Scenario', label = 'Scenario', choices = unique(resultsFiltered()$Scenario), selected = unique(resultsFiltered()$Scenario)[1]))  })
+outputOptions(x = output, name = "scenarioBalanceSheetProjections", suspendWhenHidden = FALSE)
+
+```
+
+Row 
+-------------------------------------
+ 
+### <span style="color:`r borderTextColor`">ROE waterfall of costs and income (reporting in BPS of total amount used at t=0)</span> {.bgred}
+ 
+```{r}
+
+# DT[, ReplineID := paste0(BankNameShort, "_", Country, "_", ExposureReduced, "_", PortfolioLabel)]
+
+waterFallPlot <- reactive({
+
+# function for waterfall plot
+createWaterfall <- function(dfNames,dfValues,isSum,isIntermediateSum,title,subTitle,xTitle,yTitle, thm){
+
+
+  #dfValues <- dfValues/dfValues[1]*100
+
+  df <- data.frame(name = dfNames,y = dfValues,stringsAsFactors = FALSE,
+                   isSum = as.logical(isSum),
+                   isIntermediateSum = as.logical(isIntermediateSum))
+
+  df <- df %>%
+    mutate(color = ifelse(y>0,lineColors[1],ifelse(y<0,lineColors[4],NA)))
+
+  maxY = max(cumsum(na.omit(dfValues)))      #sum(na.omit(dfValues[dfValues > 0])) + 1
+  minY = min(c(0,cumsum(na.omit(dfValues))))  #sum(na.omit(dfValues[dfValues < 0])) +100 - 1
+
+  datSeries <- list_parse(df)
+
+  highchart() %>%
+    hc_chart(type = "waterfall") %>%
+    #hc_title(text = title) %>%
+    #hc_subtitle(text = subTitle) %>%
+    hc_xAxis(categories = df$name,
+             title=list(text=xTitle)) %>%
+    hc_yAxis(title=list(text=yTitle), max = maxY, min = minY) %>%
+    hc_legend(enabled=FALSE) %>%
+    hc_tooltip(pointFormat="{point.y:,.2f}") %>%
+    hc_series(list(color=lineColors[9],
+                   data=datSeries,
+                   dataLabels=list(
+                     enabled=TRUE,
+                     format = '{point.y:,.2f}',
+                     style=list(
+                       fontWeight="bold",
+                       textShadow="0px 0px 3px black")),
+                   pointPadding=0)) %>%
+    hc_add_theme(thm)
+}
+
+DT <- resultsFiltered()
+DT[, CurrentBalance := as.numeric(EAD)]
+DT[, Drawn_perc := DrawnAmount/(DrawnAmount + UndrawnAmount)]
+DT[, gross_interest_income:= currentinterestrate * CurrentBalance * Drawn_perc]
+DT[, FTP_annual_charge := input$FTPRate * CurrentBalance * Drawn_perc]
+DT[, commitment_fee_income:= UndrawnAmount * input$selectCommitmentFee]
+DT <- subset(DT, select = c(LoanIdentifier, gross_interest_income, FTP_annual_charge,
+                            commitment_fee_income, ECL_1Y, CurrentBalance))
+DT <- DT[complete.cases(DT), ]
+
+#ROE waterfall statistics calculation
+Gross_Interest_Income <- round((sum(DT$gross_interest_income) / sum(DT$CurrentBalance)),4)*10000
+FTP <- round((-sum(DT$FTP_annual_charge) / sum(DT$CurrentBalance)),4)*10000
+#NII <- (Gross_Interest_Income + FTP)
+Comm_Fees <- round((sum(DT$commitment_fee_income) / sum(DT$CurrentBalance)),4)*10000
+Overhead_Cost <- -(Gross_Interest_Income + FTP)*input$CostIncomeRatio             #HARDCODED > input$Overhead
+Credit_Cost_1Y <- round((-sum(DT$ECL_1Y) / sum(DT$CurrentBalance)),4)*10000
+Net_Income <- (Gross_Interest_Income + FTP + Comm_Fees + Overhead_Cost + Credit_Cost_1Y)
+Tax <- round(-Net_Income * input$TaxAssumption)  # HARDCODE > input$Tax_Assumption
+NI_After_Tax <- round((Net_Income + Tax))
+
+dfValues <- c(Gross_Interest_Income, FTP, Comm_Fees, Overhead_Cost, Credit_Cost_1Y, NA, Tax, NA)
+dfNames  <- c("Gross Interest Income", "FTP", "Commitment Fees", "Cost", "1Y Credit Cost",  "Net Income", "Tax","NI After Tax")
+isIntermediateSum = c(0,0,0,0,0,1,0,0)
+isSum = c(0,0,0,0,0,0,0,1)
+
+hcWaterfall <- createWaterfall(dfNames, dfValues, isSum, isIntermediateSum,"ROE waterfall of costs and income", "Reporting in BPS of total amount used","","As BPS of total used amount", thm)
+
+return(hcWaterfall)
+
+})
+
+renderHighchart({
+  if(nrow(resultsFiltered())==0 ) return(whitechart)
+  waterFallPlot()
+})
+
+
+```
+
+### <span style="color:`r borderTextColor`"> EAD, Drawn, Undrawn and Limit MM</span> {.bgred} 
+
+```{r}
+renderHighchart({ 
+   if(nrow(resultsFiltered())==0 ) return(whitechart) 
+   EADDrawnUndrawnLimitFigure() 
+}) 
+ 
+```
+
+```{r}
+### Structure ###
+# IF Period -> use results and calculate by dateyq
+# IF Sector -> use results, take first dateyq and calculate by sector
+# IF Rating -> use results, take first dateyq and calculate by rating
+
+
+EADDrawnUndrawnLimitFigure <- reactive({
+
+   DTL <- resultsFiltered() 
+
+   millionDivisor <- 1000000 
+   EADDrawnUndrawnLimit <- DTL[, list(`EAD` = round(sum(EAD/millionDivisor, na.rm = TRUE), 2), 
+                        `Drawn Amount` = round(sum(DrawnAmount/millionDivisor, na.rm = TRUE), 2), 
+                        `Undrawn Amount` = round(sum(UndrawnAmount/millionDivisor, na.rm = TRUE), 2),
+                        `Total Limit` = round(sum(TotalLimit/millionDivisor, na.rm = TRUE), 2)),  
+                   by = 'DateYQ'] 
+
+   # gather to get the data into highchart format (it condenses the information in EADRWA's column 2, 3, and 4) 
+   EADDrawnUndrawnLimit <- gather(EADDrawnUndrawnLimit, "variable", "value", c(2, 3, 4, 5)) 
+   EADDrawnUndrawnLimit <- EADDrawnUndrawnLimit[order(EADDrawnUndrawnLimit$DateYQ), ] 
+   EADDrawnUndrawnLimit <- as.data.table(EADDrawnUndrawnLimit) 
+   # for now set to below min(DateYQ) + 10, could perhaps be made interactive, to be decided 
+   EADDrawnUndrawnLimit <- EADDrawnUndrawnLimit[DateYQ < min(DateYQ) + 10, ] 
+
+   return(hchart(EADDrawnUndrawnLimit, "column", hcaes(x = DateYQ, y = value, group = variable), borderWidth = 0) %>% 
+     hc_colors(c(lineColors[c(7, 4, 1)], 'green')) %>%  
+     hc_add_theme(thm) %>% 
+     hc_xAxis(title=list(text='MM')) %>% 
+     hc_yAxis(title=list(text='Date'))) 
+     
+
+})
+
+```
+
+Row
+-----------------------------------------------
+
+### <span style="color:`r borderTextColor`"> ECL MM</span> {.bgred} 
+
+```{r}
+ 
+
+
+renderHighchart({ 
+   if(nrow(resultsFiltered())==0 ) return(whitechart) 
+   ECLFigure() 
+}) 
+ 
+
+EADRWAPlot <- reactive({
+  
+  DTL <- resultsFiltered()[substr(Scenario, nchar(Scenario) - 7, nchar(Scenario))==substr(input$Scenario, nchar(input$Scenario) - 7, nchar(input$Scenario))]
+    
+  millionDivisor <- 1000000
+  EADRWA <- DTL[, list(`EAD` = round(sum(EAD/millionDivisor, na.rm = TRUE), 2),
+                       `RWA B3 IRBA` = round(sum(RWA_B3IRBA/millionDivisor, na.rm = TRUE), 2),
+                       `RWA B3 S` = round(sum(RWA_B3SA/millionDivisor, na.rm = TRUE), 2)), 
+                  by = 'DateYQ']
+  
+  # gather to get the data into highchart format (it condenses the information in EADRWA's column 2, 3, and 4)
+  EADRWAData <- gather(EADRWA, "variable", "value", c(2, 3, 4))
+  EADRWAData <- EADRWAData[order(EADRWAData$DateYQ), ]
+  EADRWAData <- as.data.table(EADRWAData)
+  # for now set to below min(DateYQ) + 10, could perhaps be made interactive, to be decided
+  EADRWAData <- EADRWAData[DateYQ < min(DateYQ) + 10, ]
+  
+  return(hchart(EADRWAData, "column", hcaes(x = DateYQ, y = value, group = variable), borderWidth = 0) %>%
+    hc_colors(lineColors[c(7, 4, 1)]) %>% 
+    hc_add_theme(thm) %>%
+    hc_xAxis(title=list(text='MM')) %>%
+    hc_yAxis(title=list(text='Date')))
+  
+})
+
+
+```
+
+```{r}
+# shows basel, ifrs 9 after weighting scenarios, ifrs 9 life time, cecl, stage 2, stage 3 ECLs
+
+ECLFigure <- reactive({
+
+results <- resultsFiltered()
+results <- left_join(results, mappingTableProbScen[, c('Scenario', 'ScenarioProbabilityPerc'), with = FALSE])
+results <- as.data.table(results)
+
+# ECL_Life weighted by scenario probability   
+
+lifeList <- c(paste0("Rating",3:8),paste0("ECL_Life_Rating",3:8))
+lifeExclude <- lifeList[!lifeList %in% names(results)]
+if(length(lifeExclude)!=0){
+results[,(lifeExclude):=0]
+}
+results[, ECL_Life := Rating3 * ECL_Life_Rating3 + Rating4 * ECL_Life_Rating4 + Rating5 * ECL_Life_Rating5 + 
+          Rating6 * ECL_Life_Rating6 + Rating7 * ECL_Life_Rating7 + Rating8 * ECL_Life_Rating8]
+results[, ECL_Life_Times_Scenario_Prob := ECL_Life * ScenarioProbabilityPerc / 100] 
+if(length(lifeExclude)!=0){
+results[,(lifeExclude):=NULL]
+}
+
+# Stage 1, 2, 3
+AssetClass <- max(results$BorrowerBaselIIISegment, na.rm = T)
+
+Y1_List <- c(paste0("Rating",3:8),paste0("ECL_1Y_Rating",3:8))
+Y1_Exclude <- lifeList[!lifeList %in% names(results)]
+if(length(Y1_Exclude)!=0){
+results[,(Y1_Exclude):=0]
+}
+results[, Stage1ECL := ECL_1Y_Rating4*Rating4][AssetClass!="RetailMortgages",  Stage1ECL := ECL_1Y_Rating3*Rating3 + ECL_1Y_Rating4*Rating4 + ECL_1Y_Rating5*Rating5 + ECL_1Y_Rating6*Rating6]
+results[, Stage1ECLTimesScenarioProb := Stage1ECL * ScenarioProbabilityPerc / 100] 
+results[, Stage2ECL := ECL_Life_Rating7*Rating7][AssetClass!="RetailMortgages",  Stage2ECL := ECL_Life_Rating7*Rating7 + ECL_Life_Rating8*Rating8]
+results[, Stage2ECLTimesScenarioProb := Stage2ECL * ScenarioProbabilityPerc / 100] 
+results[, Stage3ECL := ECL_Default*Default] 
+results[, Stage3ECLTimesScenarioProb := Stage3ECL * ScenarioProbabilityPerc / 100] 
+if(length(Y1_Exclude)!=0){
+results[,(Y1_Exclude):=NULL]
+}
+
+# load DTL
+DTL <- resultsFiltered()
+
+  # by period plot
+  millionDivisor <- 1000000
+  ECL <- results[, list(`Stage 1 ECL` = round(sum(Stage1ECLTimesScenarioProb/millionDivisor, na.rm = TRUE), 2),
+                       `Stage 2 ECL` = round(sum(Stage2ECLTimesScenarioProb/millionDivisor, na.rm = TRUE), 2),
+                       `Stage 3 ECL` = round(sum(Stage3ECLTimesScenarioProb/millionDivisor, na.rm = TRUE), 2),
+                       `IFRS 9 Lifetime ECL` = round(sum(ECL_Life_Times_Scenario_Prob/millionDivisor, na.rm = TRUE), 2)), 
+                 by = 'DateYQ']
+  
+  ECL <- cbind(ECL, DTL[, list(`Basel ECL` = round(sum(ECL_1Y/millionDivisor, na.rm = TRUE), 2)), 
+                        by = 'DateYQ'][, 'Basel ECL'])
+
+  # gather to get the data into highchart format (it condenses the information in ECL's column 2, 3, and 4)
+  ECLData <- gather(ECL, "variable", "value", c(2, 3, 4, 5, 6))
+  ECLData <- ECLData[order(ECLData$DateYQ), ]
+  ECLData <- as.data.table(ECLData)
+  # for now set to below min(DateYQ) + 10, could perhaps be made interactive
+  ECLData <- ECLData[DateYQ < min(DateYQ) + 10, ]
+
+  return(hchart(ECLData, "column", hcaes(x = DateYQ, y = value, group = variable), borderWidth = 0) %>%
+                  hc_colors(c(lineColors[c(7, 4, 1)], 'green', 'red')) %>% # select 9, 7, 5, 3 for high contrast
+                  hc_add_theme(thm) %>%
+                  hc_xAxis(title=list(text='MM')) %>%
+                  hc_yAxis(title=list(text='Date')))
+  
+
+  return(hchart(EADRWAData, "column", hcaes(x = DateYQ, y = `ECL MM`), borderWidth = 0) %>%
+    hc_colors(lineColors[c(7, 4, 1)]) %>% # select 7, 4, 1 for high contrast 
+    hc_add_theme(thm) %>%
+    hc_xAxis(title=list(text='MM')) %>%
+    hc_yAxis(title=list(text='Date')))
+
+  
+
+})
+
+```
+
+### <span style="color:`r borderTextColor`">RWA MM</span> <span style="color:`r borderTextColor`"></span> {.bgred}
+
+```{r}
+
+  
+ 
+renderHighchart({ 
+     if(nrow(resultsFiltered())==0 ) return(whitechart) 
+     B3B4Plot() 
+}) 
+ 
+
+
+```
+
+```{r}
+
+B3B4Plot <- reactive({
+  
+  results <- resultsFiltered()[substr(Scenario, nchar(Scenario) - 7, nchar(Scenario))==substr(input$Scenario, nchar(input$Scenario) - 7, nchar(input$Scenario))]
+
+  # by period plot
+  millionDivisor <- 1000000
+  RWA <- results[, list(`RWA B3 IRBA` = round(sum(RWA_B3IRBA/millionDivisor, na.rm = TRUE), 2),
+                       `RWA B3 SA` = round(sum(RWA_B3SA/millionDivisor, na.rm = TRUE), 2),
+                       `RWA B4 IRBA` = round(sum(RWA_B4IRBA/millionDivisor, na.rm = TRUE), 2),
+                       `RWA B4 SA` = round(sum(RWA_B4SA/millionDivisor, na.rm = TRUE), 2),
+                       `RWA IRBA-SA Floor` = round(sum(RWA_IRBA_Floor/millionDivisor, na.rm = TRUE), 2),
+                       `RWA SA Actual` = round(sum(RWA_SA_Actual/millionDivisor, na.rm = TRUE), 2),
+                       `RWA IRBA Actual` = round(sum(RWA_IRBA_Actual/millionDivisor, na.rm = TRUE), 2)
+                       ), by = 'DateYQ']
+
+  # gather to get the data into highchart format (it condenses the information in RWA's column 2, 3, and 4)
+  RWAData <- gather(RWA, "variable", "value", c(2, 3, 4, 5, 6, 7, 8))
+  RWAData <- RWAData[order(RWAData$DateYQ), ]
+  RWAData <- as.data.table(RWAData)
+  # for now set to below min(DateYQ) + 10, could perhaps be made interactive
+  RWAData <- RWAData[DateYQ < min(DateYQ) + 10, ]
+
+  return(hchart(RWAData, "column", hcaes(x = DateYQ, y = value, group = variable), borderWidth = 0) %>%
+                  hc_colors(c(lineColors[c(7,8,6:2)], 'green')) %>% # select 9, 7, 5, 3 for high contrast
+                  hc_add_theme(thm) %>%
+                  hc_xAxis(title=list(text='MM')) %>%
+                  hc_yAxis(title=list(text='Date')))
+
+  
+})
+
+
+```
+ 

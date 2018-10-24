@@ -1,0 +1,12 @@
+name: metisdemo2
+title: MetisDemo
+username: michael.hogers
+account: michael.hogers
+server: applications.os-is.com
+hostUrl: https://applications.os-is.com/__api__
+appId: 132
+bundleId: 793
+url: https://applications.os-is.com/content/132/
+when: 1534927990.45941
+asMultiple: FALSE
+asStatic: FALSE

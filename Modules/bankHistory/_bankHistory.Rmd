@@ -1,0 +1,513 @@
+```{r}
+# source functions
+source('ColorPaletteGeneration.R')
+
+```
+Bank History {data-icon="fa-search"}
+=====================================
+
+
+```{r}
+
+###################################################################
+#### This chunk contains the CRE_Hist on the Bank Data Overview page
+#### First we create conditional CRE_Hist with renderUI
+#### Second we create the logic for the select all/unselect all buttons
+#### Third, we create logic for the measure selection, which has to be dependent on each other
+####    it consists of multiple menus but they should only allow one item to be selected across all menus
+#### Fourth we render everything in a navbar
+####################################################################
+
+#### First we create conditional CRE_Hist with renderUI
+
+output$countryFilterSettingHist1UI <- renderUI({
+  checkboxGroupButtons(inputId = "countryFilterSettingHist1", 
+  label = "Europe", choices = intersect(unique(results()$Country), unique(CRE_Hist[Continent=='Europe' & BankNameShort %in% input$bankFilterSettingHist, Country])), selected = 'NL', individual = TRUE, 
+  checkIcon = checkIconList)
+})
+
+output$countryFilterSettingHist2UI <- renderUI({
+  checkboxGroupButtons(inputId = "countryFilterSettingHist2", 
+    label = "Asia", choices = intersect(unique(results()$Country), unique(CRE_Hist[Continent=='Asia' & BankNameShort %in% input$bankFilterSettingHist, Country])), individual = TRUE, 
+    checkIcon = checkIconList)
+})
+
+output$countryFilterSettingHist3UI <- renderUI({
+  
+  checkboxGroupButtons(inputId = "countryFilterSettingHist3", 
+  label = "Americas", choices = intersect(unique(results()$Country), unique(CRE_Hist[Continent=='Americas' & BankNameShort %in% input$bankFilterSettingHist, Country])), individual = TRUE, 
+  checkIcon = checkIconList)
+  
+})
+
+output$countryFilterSettingHist4UI <- renderUI({
+  
+  checkboxGroupButtons(inputId = "countryFilterSettingHist4", 
+  label = "Other", choices = intersect(c('ALL', unique(results()$Country)), unique(CRE_Hist[!Continent %in% c('Americas', 'Asia', 'Europe') & BankNameShort %in% input$bankFilterSettingHist, Country])), individual = TRUE, 
+  checkIcon = checkIconList)
+  
+})
+
+output$ExposureTypeFilterSettingHist1UI <- renderUI({
+  checkboxGroupButtons(inputId = "ExposureTypeFilterSettingHist1", 
+    label = "Corporates", choices = unique(CRE_Hist[ExposureClass=='Corporates' & BankNameShort %in% input$bankFilterSettingHist & Country %in% c(input$countryFilterSettingHist1, input$countryFilterSettingHist2, input$countryFilterSettingHist3, input$countryFilterSettingHist4), ExposureLabel]), selected = 'Large Corporates', individual = TRUE, 
+    checkIcon = checkIconList)
+})
+
+output$ExposureTypeFilterSettingHist2UI <- renderUI({
+  checkboxGroupButtons(inputId = "ExposureTypeFilterSettingHist2", 
+    label = "Retail", choices = unique(CRE_Hist[ExposureClass=='Retail' & BankNameShort %in% input$bankFilterSettingHist & Country %in% c(input$countryFilterSettingHist1, input$countryFilterSettingHist2, input$countryFilterSettingHist3, input$countryFilterSettingHist4), ExposureLabel]),  individual = TRUE, 
+    checkIcon = checkIconList)
+})
+
+#### Second we create the logic for the select all/unselect all buttons
+
+# for later reference in this second part, but also third part
+checkIconList <- list(yes = tags$i(class = "fa fa-circle", 
+                      style = "color: steelblue"), 
+                      no = tags$i(class = "fa fa-circle-o", 
+                      style = "color: steelblue"))
+
+# Bank dropdown
+observeEvent(input$selectAllBanks, {
+      shinyWidgets::updateCheckboxGroupButtons(session, "bankFilterSettingHist", "Bank Setting", choices=unique(CRE_Hist$BankNameShort), selected=unique(CRE_Hist$BankNameShort), checkIcon = checkIconList)
+})
+observeEvent(input$deselectAllBanks, {
+      shinyWidgets::updateCheckboxGroupButtons(session, "bankFilterSettingHist", "Bank Setting", choices=unique(CRE_Hist$BankNameShort), selected=NULL, checkIcon = checkIconList)
+})
+# Country dropdown
+# Europe
+observeEvent(input$selectAllEurope, {
+      shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingHist1", "Europe", choices=countriesShortCodeContinent[Continent == 'Europe', Country][which(countriesShortCodeContinent[Continent == 'Europe', Country] %in% CRE_Hist[BankNameShort %in% input$bankFilterSettingHist, Country])], selected=countriesShortCodeContinent[Continent == 'Europe', Country][which(countriesShortCodeContinent[Continent == 'Europe', Country] %in% CRE_Hist[BankNameShort %in% input$bankFilterSettingHist, Country])], checkIcon = checkIconList)
+})
+observeEvent(input$deselectAllEurope, {
+      shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingHist1", "Bank Setting", choices=countriesShortCodeContinent[Continent == 'Europe', Country][which(countriesShortCodeContinent[Continent == 'Europe', Country] %in% CRE_Hist[BankNameShort %in% input$bankFilterSettingHist, Country])], selected=NULL, checkIcon = checkIconList)
+})
+# Asia
+observeEvent(input$selectAllAsia, {
+      shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingHist2", "Asia", choices=countriesShortCodeContinent[Continent == 'Asia', Country][which(countriesShortCodeContinent[Continent == 'Asia', Country] %in% CRE_Hist[BankNameShort %in% input$bankFilterSettingHist, Country])], selected=countriesShortCodeContinent[Continent == 'Asia', Country][which(countriesShortCodeContinent[Continent == 'Asia', Country] %in% CRE_Hist[BankNameShort %in% input$bankFilterSettingHist, Country])], checkIcon = checkIconList)
+})
+observeEvent(input$deselectAllAsia, {
+      shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingHist2", "Asia", choices=countriesShortCodeContinent[Continent == 'Asia', Country][which(countriesShortCodeContinent[Continent == 'Asia', Country] %in% CRE_Hist[BankNameShort %in% input$bankFilterSettingHist, Country])], selected=NULL, checkIcon = checkIconList)
+})
+# Americas
+observeEvent(input$selectAllAmericas, {
+      shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingHist3", "Americas", choices=countriesShortCodeContinent[Continent == 'Americas', Country][which(countriesShortCodeContinent[Continent == 'Americas', Country] %in% CRE_Hist[BankNameShort %in% input$bankFilterSettingHist, Country])], selected=countriesShortCodeContinent[Continent == 'Americas', Country][which(countriesShortCodeContinent[Continent == 'Americas', Country] %in% CRE_Hist[BankNameShort %in% input$bankFilterSettingHist, Country])], checkIcon = checkIconList)
+})
+observeEvent(input$deselectAllAmericas, {
+      shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingHist3", "Americas", choices=countriesShortCodeContinent[Continent == 'Americas', Country][which(countriesShortCodeContinent[Continent == 'Americas', Country] %in% CRE_Hist[BankNameShort %in% input$bankFilterSettingHist, Country])], selected=NULL, checkIcon = checkIconList)
+})
+# Other
+observeEvent(input$selectAllOther, {
+      shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingHist4", "Other", choices=unique(CRE_Hist[!Continent %in% c('Americas', 'Asia', 'Europe') & BankNameShort %in% input$bankFilterSettingHist, Country]), selected = unique(CRE_Hist[!Continent %in% c('Americas', 'Asia', 'Europe') & BankNameShort %in% input$bankFilterSettingHist, Country]), checkIcon = checkIconList)
+})
+observeEvent(input$deselectAllOther, {
+      shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingHist4", "Other", choices=countriesShortCodeContinent[!Continent %in% c('Americas', 'Asia', 'Europe'), Country][which(countriesShortCodeContinent[!Continent %in% c('Americas', 'Asia', 'Europe'), Country] %in% CRE_Hist[BankNameShort %in% input$bankFilterSettingHist, Country])], selected=NULL, checkIcon = checkIconList)
+})
+# Exposure type dropdown
+# corporates
+observeEvent(input$selectAllCorporates, {
+      shinyWidgets::updateCheckboxGroupButtons(session, "ExposureTypeFilterSettingHist1", "Corporates", choices=unique(CRE_Hist[ExposureClass=='Corporates' & BankNameShort %in% input$bankFilterSettingHist & Country %in% c(input$countryFilterSettingHist1, input$countryFilterSettingHist2, input$countryFilterSettingHist3, input$countryFilterSettingHist4), ExposureLabel]), selected=unique(CRE_Hist[ExposureClass=='Corporates' & BankNameShort %in% input$bankFilterSettingHist & Country %in% c(input$countryFilterSettingHist1, input$countryFilterSettingHist2, input$countryFilterSettingHist3, input$countryFilterSettingHist4), ExposureLabel]), checkIcon = checkIconList)
+})
+observeEvent(input$deselectAllCorporates, {
+      shinyWidgets::updateCheckboxGroupButtons(session, "ExposureTypeFilterSettingHist1", "Corporates", choices=unique(CRE_Hist[ExposureClass=='Corporates' & BankNameShort %in% input$bankFilterSettingHist & Country %in% c(input$countryFilterSettingHist1, input$countryFilterSettingHist2, input$countryFilterSettingHist3, input$countryFilterSettingHist4), ExposureLabel]), selected=NULL, checkIcon = checkIconList)
+})
+# retail
+observeEvent(input$selectAllRetail, {
+      shinyWidgets::updateCheckboxGroupButtons(session, "ExposureTypeFilterSettingHist2", "Retail", choices=unique(CRE_Hist[ExposureClass=='Retail' & BankNameShort %in% input$bankFilterSettingHist & Country %in% c(input$countryFilterSettingHist1, input$countryFilterSettingHist2, input$countryFilterSettingHist3, input$countryFilterSettingHist4), ExposureLabel]), selected=unique(CRE_Hist[ExposureClass=='Retail' & BankNameShort %in% input$bankFilterSettingHist & Country %in% c(input$countryFilterSettingHist1, input$countryFilterSettingHist2, input$countryFilterSettingHist3, input$countryFilterSettingHist4), ExposureLabel]), checkIcon = checkIconList)
+})
+observeEvent(input$deselectAllRetail, {
+      shinyWidgets::updateCheckboxGroupButtons(session, "ExposureTypeFilterSettingHist2", "Retail", choices=unique(CRE_Hist[ExposureClass=='Retail' & BankNameShort %in% input$bankFilterSettingHist & Country %in% c(input$countryFilterSettingHist1, input$countryFilterSettingHist2, input$countryFilterSettingHist3, input$countryFilterSettingHist4), ExposureLabel]), selected=NULL, checkIcon = checkIconList)
+})
+
+#### Fourth we render everything in a navbar
+
+shinyUI(
+  fluidPage(
+    navbarPage("",
+               tabPanel(
+                 div(style="display: inline-block; align: center;",
+                     shinyWidgets::dropdown(label='Bank', status = "primary",
+    fluidRow(
+       column(10,offset=0,
+          div(style = "padding: 0px 0px; margin-left:0.1%",
+checkboxGroupButtons(inputId = "bankFilterSettingHist", 
+  label = "Selection of banks(s)", choices = unique(CRE_Hist$BankNameShort), selected = unique(CRE_Hist$BankNameShort),individual = TRUE, 
+  checkIcon = checkIconList),
+br(),
+actionButton("selectAllBanks", "Select All"),
+actionButton("deselectAllBanks", "Deselect All")
+  ))))
+  , circle = F, status = "primary",
+    icon = icon("time"), width = "300px",
+    tooltip = tooltipOptions(title = "Click to modify")
+))  ,
+
+  tabPanel(div(style="display: inline-block;",shinyWidgets::dropdown(label = 'Country',
+    fluidRow(
+        column(3,offset=0,
+       div(style="display: inline-block; align: center;",
+           uiOutput('countryFilterSettingHist1UI'),
+           br(),
+           actionButton("selectAllEurope", "Select All"),
+           actionButton("deselectAllEurope", "Deselect All")
+           ,
+    circle = F, status = "primary",
+    icon = icon("time"), width = "300px",
+    tooltip = tooltipOptions(title = "Click to modify")
+)
+               
+               ),
+    
+      column(3,offset=0,
+       div(style = "padding: 0px 0px; margin-left:0.1%",
+        uiOutput('countryFilterSettingHist2UI'),
+           br(),
+           actionButton("selectAllAsia", "Select All"),
+           actionButton("deselectAllAsia", "Deselect All")
+       )),
+
+
+column(3,offset=0,
+       div(style = "padding: 0px 0px; margin-left:0.1%",
+           uiOutput('countryFilterSettingHist3UI'),
+           br(),
+           actionButton("selectAllAmericas", "Select All"),
+           actionButton("deselectAllAmericas", "Deselect All")
+       )),
+
+column(3,offset=0,
+       div(style = "padding: 0px 0px; margin-left:0.1%",
+           uiOutput('countryFilterSettingHist4UI'),
+           br(),
+           actionButton("selectAllOther", "Select All"),
+           actionButton("deselectAllOther", "Deselect All")
+       ))
+
+  )
+  ,
+    circle = F, status = "primary", width = "1000px",
+    tooltip = tooltipOptions(title = "Click to modify")
+  ))),
+
+  tabPanel(div(style="display: inline-block;",shinyWidgets::dropdown(label = 'Exposure',
+    fluidRow(
+        column(4,offset=0,
+       div(style="display: inline-block; align: center;",
+                     uiOutput('ExposureTypeFilterSettingHist1UI'),
+           br(),
+           actionButton("selectAllCorporates", "Select All"),
+           actionButton("deselectAllCorporates", "Deselect All")
+       ))
+       ,
+    
+      column(4,offset=2,
+       div(style = "padding: 0px 0px; margin-left:0.1%",
+          uiOutput('ExposureTypeFilterSettingHist2UI'),
+           br(),
+           actionButton("selectAllRetail", "Select All"),
+           actionButton("deselectAllRetail", "Deselect All")
+       ))
+  )
+  ,
+    circle = F, status = "primary", width = "400px",
+    tooltip = tooltipOptions(title = "Click to modify")
+  ))),
+   tabPanel(
+                   div(style="display: inline-block; align: center;",
+                       shinyWidgets::dropdown(label='Portfolio', status = "primary",
+      fluidRow(
+         column(10,offset=0,
+            div(style = "padding: 0px 0px; margin-left:0.1%",
+  radioGroupButtons(inputId = "PortfolioTypeSelection", individual = T,
+   choices = c("IRB","SA","IRB and SA"), selected = 'IRB',
+    checkIcon = list(yes = tags$i(class = "fa fa-circle", 
+      style = "color: steelblue"), 
+      no = tags$i(class = "fa fa-circle-o", 
+        style = "color: steelblue")))
+    ))))
+    ,
+      circle = F, status = "primary",
+      icon = icon("time"), width = "300px",
+      tooltip = tooltipOptions(title = "Click to modify inputs")
+  )) ,tabPanel(
+                   div(style="display: inline-block; align: center;",
+                       shinyWidgets::dropdown(label='Portfolio Level', status = "primary",
+      fluidRow(
+         column(10,offset=0,
+            div(style = "padding: 0px 0px; margin-left:0.1%",
+  radioGroupButtons(inputId = "BreakDownMeasureFilterSettingHist", individual = T,
+    label = "Portfolio Level Measures Selection", choices = colnames(CRE_Hist)[9:22], selected = 'EAD',
+    checkIcon = list(yes = tags$i(class = "fa fa-circle", 
+      style = "color: steelblue"), 
+      no = tags$i(class = "fa fa-circle-o", 
+        style = "color: steelblue")))
+    ))))
+    ,
+      circle = F, status = "primary",
+      icon = icon("time"), width = "300px",
+      tooltip = tooltipOptions(title = "Click to modify inputs")
+  )) ,tabPanel(
+                   div(style="display: inline-block; align: center;",
+                       shinyWidgets::dropdown(label='Bank Level', status = "primary",
+      fluidRow(
+         column(10,offset=0,
+            div(style = "padding: 0px 0px; margin-left:0.1%",
+  radioGroupButtons(inputId = "BankLevelFilterSettingHist", individual = T,
+    label = "Bank Level Measure Setting", choices = colnames(CAPL_Hist)[4:33], selected = 'COMMON EQUITY TIER 1 CAPITAL RATIO (transitional period)',
+    checkIcon = list(yes = tags$i(class = "fa fa-circle", 
+      style = "color: steelblue"), 
+      no = tags$i(class = "fa fa-circle-o", 
+        style = "color: steelblue")))
+    ))))
+    ,
+      circle = F, status = "primary",
+      icon = icon("time"), width = "300px",
+      tooltip = tooltipOptions(title = "Click to modify inputs")
+  )) 
+)
+, 
+HTML("<script>var parent = document.getElementsByClassName('navbar-nav');
+parent[0].insertAdjacentHTML( 'afterend', '<ul class=\"nav navbar-nav navbar-right\"><li class=\"disabled\"><a href=\"#\">v0.1</a></li></ul>' );</script>")
+    ))
+
+```
+
+```{r, include = FALSE}
+outputOptions(x = output, name = "countryFilterSettingHist1UI", suspendWhenHidden = FALSE)
+outputOptions(x = output, name = "countryFilterSettingHist2UI", suspendWhenHidden = FALSE)
+outputOptions(x = output, name = "countryFilterSettingHist3UI", suspendWhenHidden = FALSE)
+outputOptions(x = output, name = "countryFilterSettingHist4UI", suspendWhenHidden = FALSE)
+outputOptions(x = output, name = "ExposureTypeFilterSettingHist1UI", suspendWhenHidden = FALSE)
+outputOptions(x = output, name = "ExposureTypeFilterSettingHist2UI", suspendWhenHidden = FALSE)
+```
+
+Row {data-height=80}
+-------------------------------------
+  
+### <span style="color:`r valueBoxTextColor`"></span>
+
+```{r}
+renderValueBox({
+  valueBox(tags$p(paste0('Country Selection: ', paste(as.vector(c(input$countryFilterSettingHist1, 
+                                                       input$countryFilterSettingHist2, 
+                                                       input$countryFilterSettingHist3, 
+                                                       input$countryFilterSettingHist4)), collapse = " ")), style = "font-size: 50%;"))
+})
+```
+
+### <span style="color:`r valueBoxTextColor`"></span>
+
+```{r}
+renderValueBox({
+  valueBox(tags$p(paste0('Banks Selected: ', length(input$bankFilterSettingHist)), style = "font-size: 50%;"))
+})
+```
+
+### <span style="color:`r valueBoxTextColor`"></span>
+
+```{r}
+renderValueBox({
+  valueBox(tags$p(paste0('Portfolio Type: ', paste(input$PortfolioTypeSelection, collapse = " ")), style = "font-size: 50%;"))
+})
+```
+
+### <span style="color:`r valueBoxTextColor`"></span>
+
+```{r}
+renderValueBox({
+  valueBox(tags$p(paste('EAD Selection at', max(CRE_SubSelect()$CRE_HistSub$DateYQ), ':',round(sum(CRE_SubSelect()$CRE_HistSub[DateYQ==max(DateYQ),EAD])/1000), 'BN'), style = "font-size: 50%;"))
+})
+```
+
+### <span style="color:`r valueBoxTextColor`"></span>
+
+```{r}
+renderValueBox({
+  valueBox(tags$p('Source - EBA TR13/15:17, ST14/16', style = "font-size: 50%;"))
+})
+```
+
+Row
+-------------------------------------
+
+### <span style="color:`r borderTextColor`">`r renderText(return(paste('Portfolio Level:', input$BreakDownMeasureFilterSettingHist)))`</span>
+```{r}
+CRE_ItemSelect <- reactive({
+input$renewValue
+
+CRE_temp <- CRE_SubSelect()$CRE_HistSub  
+CRE_temp[, Selected := get(input$BreakDownMeasureFilterSettingHist)]
+print(summary(CRE_temp$Selected))
+if(!(input$BreakDownMeasureFilterSettingHist %in% colnames(CRE_Hist)[15:22])) CRE_temp[, Selected := Selected/1000]
+print(summary(CRE_temp$Selected))
+
+Selectedplot <- hchart(CRE_temp[!is.na(Selected) & is.finite(Selected) & Selected!=0], "line", 
+                       hcaes(x = DateYQ, y = round(Selected,2), group = Repline))%>% 
+  hc_yAxis(title=list(text='Coverage Ratio'),
+           labels=list(format = ifelse(input$BreakDownMeasureFilterSettingHist %in% colnames(CRE_Hist)[15:22], '{value}%', '{value} BN')))%>% 
+  hc_xAxis(title=list(text='Period'))%>%
+  hc_add_theme(thm)  %>%
+  hc_colors(CRE_temp[!is.na(Selected) & is.finite(Selected) & Selected!=0, unique(ReplineColor), by = Repline]$V1)  
+
+return(list(Selectedplot = Selectedplot))
+})
+
+
+renderHighchart({
+  input$renewValue
+  CRE_ItemSelect()$Selectedplot
+})
+  
+```
+
+### <span style="color:`r borderTextColor`">`r renderText(return(paste('Bank Level Capital/P&L:', input$BankLevelFilterSettingHist)))`</span>
+
+```{r}
+
+PnL_Plot <- reactive({
+CAPL_HistSub <- CAPL_Hist[BankNameShort %in% input$bankFilterSettingHist]
+CAPL_HistSub[, Selected := get(input$BankLevelFilterSettingHist)]
+if(!(input$BankLevelFilterSettingHist %in% colnames(CAPL_Hist)[27:33])) CAPL_HistSub[,Selected:=Selected/1000]
+SelMeasBankLevplot <-  hchart(CAPL_HistSub[!is.na(Selected) & is.finite(Selected) & Selected!=0], "line", 
+                              hcaes(x = DateYQ, y = round(Selected,2) , group = BankNameShort))%>% 
+                              hc_yAxis(title=list(text=input$BankLevelFilterSettingHist),
+                                       labels=list(format = ifelse(input$BankLevelFilterSettingHist %in% colnames(CAPL_Hist)[27:33], '{value}%', '{value} BN')))%>% 
+                              hc_xAxis(tickInterval=.5)%>% 
+                              hc_add_theme(thm) %>%
+                              hc_colors(CAPL_HistSub[!is.na(Selected) & is.finite(Selected) & Selected!=0, unique(ColorBase), by = BankNameShort]$V1)   
+#profits plotting
+#CAPL_Hist[, ProfitDiff := shift(diff(`PROFIT OR (-) LOSS FOR THE YEAR`), places = 1), by = 'BankNameShort']
+#CAPL_Hist[DateYQ %in% c(2014,2015), `PROFIT OR (-) LOSS FOR THE YEAR` := `PROFIT OR (-) LOSS FOR THE YEAR`/2] #'biannualize'
+#CAPL_Hist[DateYQ %in% c(2016,2017), `PROFIT OR (-) LOSS FOR THE YEAR` := ProfitDiff] 
+#
+#Profitplot <-  hchart(CAPL_Hist, "line", hcaes(x = DateYQ, y = round(`PROFIT OR (-) LOSS FOR THE YEAR`,2) , group = BankNameShort))%>% 
+#                      hc_add_theme(thm) %>%
+#                      hc_xAxis(tickInterval=.5)%>% 
+#                      hc_colors(lineColors[-1])   
+
+
+return(list(SelMeasBankLevplot = SelMeasBankLevplot))
+})
+```
+
+```{r}
+
+renderHighchart({
+  input$renewValue
+  PnL_Plot()$SelMeasBankLevplot
+})
+
+```
+
+
+Row
+-------------------------------------
+
+### <span style="color:`r borderTextColor`">Risk Weighting Visualisation for Portfolio Subselection</span>
+
+```{r}
+CRE_SubSelect <- reactive({
+input$renewValue
+# combine all country filter settings  
+countryFilterSettingHist <- as.vector(c(input$countryFilterSettingHist1, input$countryFilterSettingHist2, input$countryFilterSettingHist3, input$countryFilterSettingHist4))
+# combine all sector filter settings
+ExposureTypeFilterSettingHist <- as.vector(c(input$ExposureTypeFilterSettingHist1, input$ExposureTypeFilterSettingHist2))
+#Subselect historic credit risk data
+if (input$PortfolioTypeSelection=="IRB and SA"){PortfolioType <- c('IRB','SA')} else { PortfolioType <- input$PortfolioTypeSelection}
+CRE_HistSub <- CRE_Hist[Country %in% countryFilterSettingHist & ExposureLabel %in% ExposureTypeFilterSettingHist & 
+                          BankNameShort %in% input$bankFilterSettingHist & Portfolio%in%PortfolioType, ]
+CRE_HistSub[, Repline     := paste(BankNameShort,ExposureLabel,Country, Portfolio)]
+
+setkey(CRE_HistSub, BankNameShort, DateYQ)
+
+# differentiate base colors for replines within each bank
+MapReplineColors <-unique(CRE_HistSub[,.(ColorBase,Repline)])
+MapReplineColors[, ReplineColor := ColorPaletteGenerate(ColorBase, length(unique(Repline))),  by = ColorBase]
+CRE_HistSub <- merge(CRE_HistSub, MapReplineColors[,.(Repline, ReplineColor)], by = 'Repline')
+
+
+#Subselect scenario credit risk data
+ST_CRE16Sub <- ST_CRE16[Country %in% countryFilterSettingHist & ExposureLabel %in% ExposureTypeFilterSettingHist & 
+                          BankNameShort %in% input$bankFilterSettingHist & Portfolio%in%PortfolioType, ]
+ST_CRE16Sub[, Repline := paste(BankNameShort,ExposureLabel,Country,Portfolio,Scenario)]
+setkey(ST_CRE16Sub, Scenario, Portfolio,BankNameShort, DateYQ)
+#assign colors by scenario
+
+# differentiate base colors for replines within each bank
+MapReplineColors <-unique(ST_CRE16Sub[,.(ColorBase,Repline, Scenario)])
+MapReplineColors[Scenario=='Adverse', ReplineColor := ColorPaletteGenerate(ColorBase, length(unique(Repline)), Scenario = 'Adverse'),  by = ColorBase]
+MapReplineColors[Scenario=='Baseline', ReplineColor := ColorPaletteGenerate(ColorBase, length(unique(Repline)), Scenario = 'Baseline'),  by = ColorBase]
+ST_CRE16Sub <- merge(ST_CRE16Sub, MapReplineColors[,.(Repline, ReplineColor)], by = 'Repline')
+# mergeCol <- unique(ST_CRE16Sub[,.(Scenario, Repline)])
+# mergeCol[Scenario=='Adverse', ReplineCol := brewer.pal(length(unique(ST_CRE16Sub$Repline))/2, 'Blues')]
+# mergeCol[Scenario=='Baseline', ReplineCol := brewer.pal(length(unique(ST_CRE16Sub$Repline))/2, 'Oranges')]
+# ST_CRE16Sub <- merge(ST_CRE16Sub, mergeCol[,.(Repline, ReplineCol)], by = 'Repline')
+
+hchart(CRE_HistSub[!is.na(`Risk Weights`) & is.finite(`Risk Weights`)], "line", hcaes(x = DateYQ, y = round(`Risk Weights`,2), group = Repline))%>%
+   hc_yAxis(title=list(text='Risk weight'),labels=list(format = '{value}%')) %>%
+   hc_xAxis(title=list(text='Period'))%>%
+   hc_add_theme(thm) %>%
+   hc_colors(CRE_HistSub[!is.na(`Risk Weights`) & is.finite(`Risk Weights`), unique(ReplineColor), by = Repline]$V1) 
+
+
+return(list(CRE_HistSub = CRE_HistSub, ST_CRE16Sub = ST_CRE16Sub))
+})
+```
+
+```{r}
+
+renderHighchart({
+ hchart(CRE_SubSelect()$CRE_HistSub[!is.na(`Risk Weights`) & is.finite(`Risk Weights`)], "line", hcaes(x = DateYQ, y = round(`Risk Weights`,2), group = Repline))%>%
+   hc_yAxis(title=list(text='Risk weight'),labels=list(format = '{value}%')) %>%
+   hc_xAxis(title=list(text='Period'))%>%
+   hc_add_theme(thm) %>%
+   hc_colors(CRE_SubSelect()$CRE_HistSub[!is.na(`Risk Weights`) & is.finite(`Risk Weights`), unique(ReplineColor), by = Repline]$V1) 
+})
+  
+```
+
+### <span style="color:`r borderTextColor`">Coverage Ratio for Portfolio Subselection</span>
+
+```{r}
+renderHighchart({
+  hchart(CRE_SubSelect()$CRE_HistSub[!is.na(`Coverage Ratio`) & is.finite(`Coverage Ratio`)],
+         "line", hcaes(x = DateYQ, y = round(`Coverage Ratio`,2), group = Repline))%>% 
+  hc_yAxis(title=list(text='Coverage Ratio'),labels=list(format = '{value}%'))%>% 
+  hc_xAxis(title=list(text='Period'))%>%
+  hc_add_theme(thm) %>%
+  hc_colors(CRE_SubSelect()$CRE_HistSub[!is.na(`Coverage Ratio`) & is.finite(`Coverage Ratio`), unique(ReplineColor), by = Repline]$V1) 
+})
+
+```
+
+### <span style="color:`r borderTextColor`">Projected Impairment Rates in % for Portfolio Subselection</span>
+```{r}
+renderHighchart({
+  input$renewValue
+  hchart(CRE_SubSelect()$ST_CRE16Sub[!is.na(ImpairmentRate) & is.finite(ImpairmentRate)], showInLegend = T, 
+       "line", hcaes(x = DateYQ, y = round(ImpairmentRate * 100,2), group = Repline))%>%
+  hc_yAxis(title=list(text='Impairment Rate'),labels=list(format = '{value}%')) %>%
+  hc_xAxis(title=list(text='Period'),tickInterval=1)%>%
+  hc_add_theme(thm)%>%
+  hc_colors(unique(CRE_SubSelect()$ST_CRE16Sub[!is.na(ImpairmentRate) & is.finite(ImpairmentRate)]$ReplineColor))
+  
+  # hc_add_series(data = NULL, name = 'Baseline',  color = 'rgb(16, 124, 41)', showInLegend = T)%>%
+  # hc_add_series(data = NULL, name = 'Adverse',  color = 'rgb(224, 24, 24)', showInLegend = T)%>%
+  # hc_colors(c('rgb(224, 24, 24)','rgb(16, 124, 41)'))
+  
+  # hchart(CRE_SubSelect()$ST_CRE16Sub[!is.na(ImpairmentRate) & is.finite(ImpairmentRate)], showInLegend = F, 
+  #        "line", hcaes(x = DateYQ, y = round(ImpairmentRate * 100,2), group = Repline))%>%
+  # hc_yAxis(title=list(text='Impairment Rate'),labels=list(format = '{value}%')) %>%
+  # hc_xAxis(title=list(text='Period'),tickInterval=1)%>%
+  # hc_add_theme(thm) %>%
+  # hc_add_series(data = NULL, name = 'Baseline',  color = 'rgb(16, 124, 41)', showInLegend = T)%>%
+  # hc_add_series(data = NULL, name = 'Adverse',  color = 'rgb(224, 24, 24)', showInLegend = T)#%>%
+  # hc_colors(c('rgb(16, 124, 41)', 'rgb(224, 24, 24)')) 
+})
+  
+```
+
+
+
+

@@ -1,0 +1,264 @@
+
+```{r}
+###########################
+# Script structure:
+#  - manipulatedData(), reactive object
+#          - returns: fullData, filteredInputDataBDO, filteredInputDataNPI
+# -  input$renewValue, triggers an event from the Current Production Overview page ('Set Value')
+#          - changes:     manipulatedData()$fullData, manipulatedData()$filteredInputDataBDO
+# -  input$applyRatingsToAllSelectedReplines, triggers an event from the Current Production Overview page ('Set Rating')
+#          - changes:     manipulatedData()$fullData, manipulatedData()$filteredInputDataBDO
+# -  input$renewValueNPI, triggers an event from the New Production Overview page ('Set Value')
+#          - changes:     manipulatedData()$fullData, manipulatedData()$filteredInputDataNPI
+# -   input$applyRatingsToAllSelectedReplinesNPI, triggers an event from the New Production Overview page ('Set Rating')
+#          - changes:     manipulatedData()$fullData, manipulatedData()$filteredInputDataNPI
+#
+# Comment:
+#   We manipulate all underlying data together in manipulatedData()
+#   The observeEvents with input$renewValue and input$applyRatingsToAllSelectedReplines change all data and Current Production data
+#   The observeEvents with input$renewValueNPI and input$applyRatingsToAllSelectedReplinesNPI change all data and New Production data
+# 
+# Last updated: 03/09/2018
+
+
+# validation of inputs on current production page
+source('currentProductionPageMeasureValidation.R')
+# validation of inputs on new production page
+source('newProductionPageMeasureValidation.R')
+source('newProductionPageRiskTransferValidation.R')
+
+# application's data with selected rows from filters
+# returns: fullData  (all rows) and filteredInputData (select rows for a DT visualisation)
+# initial reactive variable manipulatedData, which is later
+manipulatedData <- reactive({
+
+  # TRIGGER REACTIVITY, might not be 100% necessary
+  input$renewValue
+  input$renewValueNPI
+
+  ## _bankDataOverview.Rmd outcome (named Current Production Overview)
+
+  # combine all country filter settings from the Current Production Overview page
+  countryFilterSettingBDO <- as.vector(c(input$countryFilterSettingBDO1, input$countryFilterSettingBDO2, input$countryFilterSettingBDO3, input$countryFilterSettingBDO4))
+  # combine all sector filter settings
+  sectorFilterSettingBDO <- as.vector(c(input$sectorFilterSettingBDO1, input$sectorFilterSettingBDO2))
+  # no combination of bank filter settings, only one group of filters (see structure inside dropdown menu)
+
+  # filter with inputFilte
+  
+  bankSelSideBDO <- sub("_EBAData2017Q2_Results.RData|_FDICData2018Q1_Results.RData", "",input$bankDataSelectedSidebar) 
+
+  filteredInputDataBDO <- inputs[BankNameShort %in% bankSelSideBDO,
+                                 ][Country %in% countryFilterSettingBDO &
+                                     ExposureReduced %in% sectorFilterSettingBDO &
+                                     PortfolioLabel %in% input$Formula_Selected, ] 
+  
+  ## _newProductionInputs.Rmd outcome (named New Production Overview)
+  
+  # combine all country filter settings
+  countryFilterSettingNPI <- as.vector(c(input$countryFilterSettingNPI1, input$countryFilterSettingNPI2, input$countryFilterSettingNPI3, input$countryFilterSettingNPI4))
+  # combine all sector filter settings
+  sectorFilterSettingNPI <- as.vector(c(input$sectorFilterSettingNPI1, input$sectorFilterSettingNPI2))
+  # no combination of bank filter settings, only one group of filters (see structure inside dropdown menu)
+
+  # filter with inputFilter
+  bankSelSideNPI <- sub("_EBAData2017Q2_Results.RData|_FDICData2018Q1_Results.RData", "",input$bankDataSelectedSidebar) 
+  filteredInputDataNPI <- inputs[BankNameShort %in% bankSelSideNPI,
+                                 ][Country %in% countryFilterSettingNPI &
+                                     ExposureReduced %in% sectorFilterSettingNPI &
+                                     PortfolioLabel %in% input$Formula_Selected_NPI, ]
+
+  # for later manipulation through the renewValue inputs
+  inputs[ AssetClass %in% c( "Corporates", "CRE"), 
+             AssetCorrelation := input$wholesaleAssetCorrelation]
+  inputs[ AssetClass %in% c( "Corporates", "CRE"), 
+             LGDCorr := input$wholesaleLGDCorrelation]
+  inputs[ AssetClass %in% c("Retail - SME", "residential"), 
+             AssetCorrelation := input$retailAssetCorrelation]
+  inputs[ AssetClass %in% c("Retail - SME", "residential"), 
+             LGDCorr := input$retailLGDCorrelation]
+    
+  fullData <- inputs
+  
+  return(list(fullData = fullData, filteredInputDataBDO = filteredInputDataBDO, filteredInputDataNPI = filteredInputDataNPI))
+
+})
+
+
+# when user sets the value of selected fields to a new value, show pop up if not numeric
+
+observeEvent(input$renewValue, {
+  
+  measureSelectedForValidation <- input$measureSelected
+  valueCorrespondingWithMeasure <- input$measureValueInput
+  
+  # if downturnlgd is selected the lowerbound for validation is conditional on lgd
+  if (measureSelectedForValidation == 'downturnlgd'){
+      measureSelectedForValidation <- c(measureSelectedForValidation, 'lgd')
+      # grab the highest lgd value from the selected replines, which will be the lowerbound for validation
+      maxLGD <- max(manipulatedData()$fullData[ReplineID %in% manipulatedData()$filteredInputDataBDO[, ReplineID], lgd])
+      valueCorrespondingWithMeasure <- data.table('downturnlgd' = input$measureValueInput, 'lgd' = maxLGD)
+  }
+  
+  # outcome is ' ' if checks are passed, if checks are not passed a warning message is returned
+  # checks: 1. numerical and 2. whether input value is within a certain range
+  validationOutcome <- currentProductionPageMeasureValidation(measureSelectedForValidation, valueCorrespondingWithMeasure)
+  
+  # check if input was numeric and not text, if text input is converted to NA by as.numeric (see if statement)
+  if (validationOutcome == ' '){
+
+    # change the filteredInputDataBDO frame for presentation on the input page
+    manipulatedData()$filteredInputDataBDO[, eval(input$measureSelected) := as.numeric(input$measureValueInput)]
+    # change the fullData frame with replines equal to that of selected BDO data
+    manipulatedData()$fullData[ReplineID %in% manipulatedData()$filteredInputDataBDO[, ReplineID], eval(input$measureSelected) := as.numeric(input$measureValueInput)]
+
+  } else { # if not numeric
+
+    showModal(modalDialog(
+      title = "Error Message",
+      validationOutcome,
+      easyClose = TRUE
+    ))
+  }
+
+})
+
+# RATINGS Current Production
+# check whether all inputs for ratings are correct and then set ratings
+observeEvent(input$applyRatingsToAllSelectedReplines, {
+  # [0, 1] range checks and total check (as well as numeric check)
+  check1 <- (!is.na(as.numeric(input$rating3PopupInput))) & (as.numeric(input$rating3PopupInput) <= 1) & (as.numeric(input$rating3PopupInput) >= 0)
+  check2 <- (!is.na(as.numeric(input$rating4PopupInput))) & (as.numeric(input$rating4PopupInput) <= 1) & (as.numeric(input$rating4PopupInput) >= 0)
+  check3 <- (!is.na(as.numeric(input$rating5PopupInput))) & (as.numeric(input$rating5PopupInput) <= 1) & (as.numeric(input$rating5PopupInput) >= 0)
+  check4 <- (!is.na(as.numeric(input$rating6PopupInput))) & (as.numeric(input$rating6PopupInput) <= 1) & (as.numeric(input$rating6PopupInput) >= 0)
+  check5 <- (!is.na(as.numeric(input$rating7PopupInput))) & (as.numeric(input$rating7PopupInput) <= 1) & (as.numeric(input$rating7PopupInput) >= 0)
+  check6 <- (!is.na(as.numeric(input$rating8PopupInput))) & (as.numeric(input$rating8PopupInput) <= 1) & (as.numeric(input$rating8PopupInput) >= 0)
+  totalCheck <- (as.numeric(input$rating3PopupInput) + as.numeric(input$rating4PopupInput) + as.numeric(input$rating5PopupInput) +
+    as.numeric(input$rating6PopupInput) + as.numeric(input$rating7PopupInput) + as.numeric(input$rating8PopupInput)) == 1
+  
+  if (check1 & check2 & check3 & check4 & check5 & check6 & totalCheck){
+        # change the filteredInputDataBDO frame for presentation on the input page
+        manipulatedData()$filteredInputDataBDO[, 'Rating3' := as.numeric(input$rating3PopupInput)]
+        manipulatedData()$filteredInputDataBDO[, 'Rating4' := as.numeric(input$rating4PopupInput)]
+        manipulatedData()$filteredInputDataBDO[, 'Rating5' := as.numeric(input$rating5PopupInput)]
+        manipulatedData()$filteredInputDataBDO[, 'Rating6' := as.numeric(input$rating6PopupInput)]
+        manipulatedData()$filteredInputDataBDO[, 'Rating7' := as.numeric(input$rating7PopupInput)]
+        manipulatedData()$filteredInputDataBDO[, 'Rating8' := as.numeric(input$rating8PopupInput)]
+    
+        # change the fullData frame with replines equal to that of selected BDO data
+        manipulatedData()$fullData[ReplineID %in% manipulatedData()$filteredInputDataBDO[, ReplineID], 'Rating3' := as.numeric(input$rating3PopupInput)]
+        manipulatedData()$fullData[ReplineID %in% manipulatedData()$filteredInputDataBDO[, ReplineID], 'Rating4' := as.numeric(input$rating4PopupInput)]
+        manipulatedData()$fullData[ReplineID %in% manipulatedData()$filteredInputDataBDO[, ReplineID], 'Rating5' := as.numeric(input$rating5PopupInput)]
+        manipulatedData()$fullData[ReplineID %in% manipulatedData()$filteredInputDataBDO[, ReplineID], 'Rating6' := as.numeric(input$rating6PopupInput)]
+        manipulatedData()$fullData[ReplineID %in% manipulatedData()$filteredInputDataBDO[, ReplineID], 'Rating7' := as.numeric(input$rating7PopupInput)]
+        manipulatedData()$fullData[ReplineID %in% manipulatedData()$filteredInputDataBDO[, ReplineID], 'Rating8' := as.numeric(input$rating8PopupInput)]
+
+        showNotification('Ratings changed for selected replines', type = 'message')
+        
+        output$cpmFlag <- renderText({"WARNING: inputs have been changed. Please run projections to display up-to-date results."})
+        output$ratingFlagBDO <- renderText({""})
+  } else {
+        output$ratingFlagBDO <- renderText({'Ratings do not add up to 1, are outside of the [0, 1] range or the input is a character'})
+        showNotification('Ratings do not add up to 1, are outside of the [0, 1] range or the input is a character', type = 'error')
+  }
+  
+})
+
+
+observeEvent(input$renewValueNPI, {
+
+  measureSelectedForValidation <- input$measureSelectedNPI
+  valueCorrespondingWithMeasure <- input$measureValueInputNPI
+  
+  # if downturnlgd is selected the lowerbound for validation is conditional on lgd
+  if (measureSelectedForValidation == 'New_downturnlgd'){
+      measureSelectedForValidation <- c(measureSelectedForValidation, 'New_lgd')
+      # grab the highest lgd value from the selected replines, which will be the lowerbound for validation
+      maxLGD <- max(manipulatedData()$fullData[ReplineID %in% manipulatedData()$filteredInputDataBDO[, ReplineID], New_lgd])
+      valueCorrespondingWithMeasure <- data.table('New_downturnlgd' = input$measureValueInputNPI, 'New_lgd' = maxLGD)
+  }
+  
+  # outcome is ' ' if checks are passed, if checks are not passed a warning message is returned
+  # checks: 1. numerical and 2. whether input value is within a certain range
+  validationOutcomeMeasure <- newProductionPageMeasureValidation(measureSelectedForValidation, valueCorrespondingWithMeasure)
+  
+  # check if input was numeric and not text, if text input is converted to NA by as.numeric (see if statement)
+  if (validationOutcomeMeasure == ' ' & input$measureValueInputNPI != ''){
+
+    # change the filteredInputDataBDO frame for presentation on the input page
+    manipulatedData()$filteredInputDataBDO[, eval(input$measureSelectedNPI) := as.numeric(input$measureValueInputNPI)]
+    # change the fullData frame with replines equal to that of selected BDO data
+    manipulatedData()$fullData[ReplineID %in% manipulatedData()$filteredInputDataBDO[, ReplineID], eval(input$measureSelectedNPI) := as.numeric(input$measureValueInputNPI)]
+
+  }
+  
+  validationOutcomeRiskTransfer <-  newProductionPageRiskTransferValidation(input$riskTransferSelectedNPI, input$riskTransferValueInputNPI)
+  
+  if (validationOutcomeRiskTransfer == ' ' & input$riskTransferValueInputNPI != ''){
+    
+    # change the filteredInputDataNPI frame for presentation on the input page
+    manipulatedData()$filteredInputDataNPI[, eval(input$riskTransferSelectedNPI) := as.numeric(input$riskTransferValueInputNPI)]
+    # change the fullData frame with replines equal to that of selected BDO data
+    manipulatedData()$fullData[ReplineID %in% manipulatedData()$filteredInputDataNPI[, ReplineID], eval(input$riskTransferSelectedNPI) := as.numeric(input$riskTransferValueInputNPI)]
+
+  }
+  
+  # note the '' contains one space which is a non error outcome for a validation (for both measure and risk transfer)
+  if (validationOutcomeMeasure != ' ' | validationOutcomeRiskTransfer != ' ') { # if not numeric
+
+    showModal(modalDialog(
+      title = "Error Message",
+      validationOutcomeMeasure,
+      br(),
+      validationOutcomeRiskTransfer,
+      easyClose = TRUE
+    ))
+    
+  }
+  
+})
+
+# RATINGS New Production
+# check whether all inputs for ratings are correct and then set ratings
+observeEvent(input$applyRatingsToAllSelectedReplinesNPI, {
+  # [0, 1] range checks and total check (as well as numeric check)
+  check1 <- (!is.na(as.numeric(input$rating3PopupInputNPI))) & (as.numeric(input$rating3PopupInputNPI) <= 1) & (as.numeric(input$rating3PopupInputNPI) >= 0)
+  check2 <- (!is.na(as.numeric(input$rating4PopupInputNPI))) & (as.numeric(input$rating4PopupInputNPI) <= 1) & (as.numeric(input$rating4PopupInputNPI) >= 0)
+  check3 <- (!is.na(as.numeric(input$rating5PopupInputNPI))) & (as.numeric(input$rating5PopupInputNPI) <= 1) & (as.numeric(input$rating5PopupInputNPI) >= 0)
+  check4 <- (!is.na(as.numeric(input$rating6PopupInputNPI))) & (as.numeric(input$rating6PopupInputNPI) <= 1) & (as.numeric(input$rating6PopupInputNPI) >= 0)
+  check5 <- (!is.na(as.numeric(input$rating7PopupInputNPI))) & (as.numeric(input$rating7PopupInputNPI) <= 1) & (as.numeric(input$rating7PopupInputNPI) >= 0)
+  check6 <- (!is.na(as.numeric(input$rating8PopupInputNPI))) & (as.numeric(input$rating8PopupInputNPI) <= 1) & (as.numeric(input$rating8PopupInputNPI) >= 0)
+  
+  totalCheck <- (as.numeric(input$rating3PopupInputNPI) + as.numeric(input$rating4PopupInputNPI) + as.numeric(input$rating5PopupInputNPI) +
+    as.numeric(input$rating6PopupInputNPI) + as.numeric(input$rating7PopupInputNPI) + as.numeric(input$rating8PopupInputNPI)) == 1
+  
+  if (check1 & check2 & check3 & check4 & check5 & check6 & totalCheck){
+        # change the filteredInputDataNPI frame for presentation on the input page
+        manipulatedData()$filteredInputDataNPI[, 'New_Rating3' := as.numeric(input$rating3PopupInputNPI)]
+        manipulatedData()$filteredInputDataNPI[, 'New_Rating4' := as.numeric(input$rating4PopupInputNPI)]
+        manipulatedData()$filteredInputDataNPI[, 'New_Rating5' := as.numeric(input$rating5PopupInputNPI)]
+        manipulatedData()$filteredInputDataNPI[, 'New_Rating6' := as.numeric(input$rating6PopupInputNPI)]
+        manipulatedData()$filteredInputDataNPI[, 'New_Rating7' := as.numeric(input$rating7PopupInputNPI)]
+        manipulatedData()$filteredInputDataNPI[, 'New_Rating8' := as.numeric(input$rating8PopupInputNPI)]
+    
+        # change the fullData frame with replines equal to that of selected NPI data
+        manipulatedData()$fullData[ReplineID %in% manipulatedData()$filteredInputDataNPI[, ReplineID], 'New_Rating3' := as.numeric(input$rating3PopupInputNPI)]
+        manipulatedData()$fullData[ReplineID %in% manipulatedData()$filteredInputDataNPI[, ReplineID], 'New_Rating4' := as.numeric(input$rating4PopupInputNPI)]
+        manipulatedData()$fullData[ReplineID %in% manipulatedData()$filteredInputDataNPI[, ReplineID], 'New_Rating5' := as.numeric(input$rating5PopupInputNPI)]
+        manipulatedData()$fullData[ReplineID %in% manipulatedData()$filteredInputDataNPI[, ReplineID], 'New_Rating6' := as.numeric(input$rating6PopupInputNPI)]
+        manipulatedData()$fullData[ReplineID %in% manipulatedData()$filteredInputDataNPI[, ReplineID], 'New_Rating7' := as.numeric(input$rating7PopupInputNPI)]
+        manipulatedData()$fullData[ReplineID %in% manipulatedData()$filteredInputDataNPI[, ReplineID], 'New_Rating8' := as.numeric(input$rating8PopupInputNPI)]
+
+        showNotification('Ratings changed for selected replines', type = 'message')
+        
+        output$cpmFlag <- renderText({"WARNING: inputs have been changed. Please run projections to display up-to-date results."})
+        output$ratingFlagNPI <- renderText({''})
+  } else {
+        output$ratingFlagNPI <- renderText({'Ratings do not add up to 1, are outside of the [0, 1] range or the input is a character'})
+        showNotification('Ratings do not add up to 1, are outside of the [0, 1] range or the input is a character.', type = 'error')
+  }
+  
+})
+
+
+```

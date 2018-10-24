@@ -1,0 +1,796 @@
+New Production Inputs {data-icon="fa-search"}
+=====================================
+
+
+```{r}
+output$countryFilterSettingNPI1UI <- renderUI({
+  countrySideSelNPI1 <- input$countryDataSelectedSidebar
+  country_listNPI1 <- countriesShortCodeContinent[Continent == 'Europe', Country
+                          ][which(countriesShortCodeContinent[Continent == 'Europe', Country] %in% countrySideSelNPI1)]
+ 
+  
+  checkboxGroupButtons(inputId = "countryFilterSettingNPI1", 
+  label = "Europe", 
+  choices = country_listNPI1, selected = country_listNPI1, individual = TRUE, 
+  checkIcon = checkIconList)
+  
+})
+
+outputOptions(output, "countryFilterSettingNPI1UI", suspendWhenHidden = FALSE)
+
+
+output$countryFilterSettingNPI2UI <- renderUI({
+  countrySideSelNPI2 <- input$countryDataSelectedSidebar
+  country_listNPI2 <- countriesShortCodeContinent[Continent == 'Asia', Country
+                          ][which(countriesShortCodeContinent[Continent == 'Asia', Country] %in% countrySideSelNPI2)]
+ 
+  
+  checkboxGroupButtons(inputId = "countryFilterSettingNPI2", 
+  label = "Asia", 
+  choices = country_listNPI2, selected = country_listNPI2, individual = TRUE, 
+  checkIcon = checkIconList)
+  
+})
+
+outputOptions(output, "countryFilterSettingNPI2UI", suspendWhenHidden = FALSE)
+
+output$countryFilterSettingNPI3UI <- renderUI({
+  
+    countrySideSelNPI3 <- input$countryDataSelectedSidebar
+  country_listNPI3 <- countriesShortCodeContinent[Continent == 'Americas', Country
+                          ][which(countriesShortCodeContinent[Continent == 'Americas', Country] %in% countrySideSelNPI3)]
+ 
+  
+  checkboxGroupButtons(inputId = "countryFilterSettingNPI3", 
+  label = "Americas", 
+  choices = country_listNPI3, selected = country_listNPI3, individual = TRUE, 
+  checkIcon = checkIconList)
+  
+})
+
+outputOptions(output, "countryFilterSettingNPI3UI", suspendWhenHidden = FALSE)
+
+
+output$countryFilterSettingNPI4UI <- renderUI({
+  
+  countrySideSelNPI4 <- input$countryDataSelectedSidebar
+  country_listNPI4 <- countriesShortCodeContinent[!Continent %in% c('Americas', 'Asia', 'Europe'), Country][which(countriesShortCodeContinent[!Continent %in% c('Americas', 'Asia', 'Europe'), Country] %in% countrySideSelNPI4)]
+ 
+    # set 0 to All Countries for readability
+  if ('0' %in% country_listNPI4){
+    country_listNPI4 <- as.list(c("0", setdiff(country_listNPI4, '0')))
+    names(country_listNPI4) <- c('All Countries', setdiff(country_listNPI4, '0'))  
+  }
+  
+  checkboxGroupButtons(inputId = "countryFilterSettingNPI4", 
+  label = "Other", 
+  choices = country_listNPI4, selected = country_listNPI4, individual = TRUE, 
+  checkIcon = checkIconList)
+  
+})
+
+outputOptions(output, "countryFilterSettingNPI4UI", suspendWhenHidden = FALSE)
+
+
+output$sectorFilterSettingNPI1UI <- renderUI({
+  
+  sectorSideSelNPI1 <- input$exposureReducedDataSelectedSidebar
+  sector_listNPI1 <- grep("Corporates", sectorSideSelNPI1, value = T)
+  
+  checkboxGroupButtons(inputId = "sectorFilterSettingNPI1", 
+  label = "Corporates", 
+  choices = sector_listNPI1, selected = sector_listNPI1, individual = TRUE, 
+  checkIcon = checkIconList)
+
+})
+
+outputOptions(output, "sectorFilterSettingNPI1UI", suspendWhenHidden = FALSE)
+
+output$sectorFilterSettingNPI2UI <- renderUI({
+  
+  sectorSideSelNPI2 <- input$exposureReducedDataSelectedSidebar
+  sector_listNPI2 <- grep("Retail", sectorSideSelNPI2, value = T)
+  
+  checkboxGroupButtons(inputId = "sectorFilterSettingNPI2", 
+  label = "Retail", 
+  choices = sector_listNPI2, selected = sector_listNPI2, individual = TRUE, 
+  checkIcon = checkIconList)
+  
+})
+outputOptions(output, "sectorFilterSettingNPI2UI", suspendWhenHidden = FALSE)
+
+output$portfolioFilterSettingNPI1UI <- renderUI({
+  
+  portfolioSideSelNPI1 <- input$portfolioLabelDataSelectedSidebar
+    if(portfolioSideSelNPI1 == "All Portfolios") portfolioSideSelNPI1 <- unique(results()$PortfolioLabel)
+  
+  checkboxGroupButtons(inputId = "Formula_Selected_NPI", 
+  label = "", 
+  choices = portfolioSideSelNPI1, selected = portfolioSideSelNPI1, individual = TRUE, 
+  checkIcon = checkIconList)
+  
+})
+outputOptions(output, "portfolioFilterSettingNPI1UI", suspendWhenHidden = FALSE)
+
+output$scenarioFilterSettingNPI1UI <- renderUI({
+  
+ scenarioSelNPI1 <- unique(results()$Scenario)
+  
+  selectInput(inputId = "Scenario_Selected_NPI", 
+  label = "", 
+  choices = scenarioSelNPI1, 
+  selected = grep("baseline|Baseline", scenarioSelNPI1, value = T))
+  
+})
+outputOptions(output, "scenarioFilterSettingNPI1UI", suspendWhenHidden = FALSE)
+# Adding measures here also requires you to add measures to ### input data table (we translate the new parameters to current parameters)
+output$measuresUINPI <- renderUI({
+  radioGroupButtons(inputId = "measureSelectedNPI", 
+  label = "", choices = c('Cost Income Ratio' = 'CostIncomeRatio', 'Tax Rate' = 'TaxRate', measuresToChange[which(grepl('New', measuresToChange))]), selected = 'New_downturnlgd', checkIcon = checkIconList)
+})
+
+outputOptions(output, "measuresUINPI", suspendWhenHidden = FALSE)
+
+output$riskTransferUINPI <- renderUI({
+  radioGroupButtons(inputId = "riskTransferSelectedNPI", 
+  label = "", choices = c('Hurdle Rate' = 'HurdleRate', 'CT1 Target' = 'CT1_Target', 'Dividend', 'Perc Syndicated' = 'PercSynd', 'Perc CRT' = 'PercCRT', 'Size FLP' = 'SizeFLP', 'Spread FLP' = 'SpreadFLP', 'RW Retained Senior' = 'RW_RetainedSenior', 'Perc Debt Fund' = 'PercDebtFund', 'Debt Fund Fee' = 'debtfund_fee'), selected = 'HurdleRate', checkIcon = checkIconList)
+})
+
+outputOptions(output, "riskTransferUINPI", suspendWhenHidden = FALSE)
+
+
+shinyUI(
+  fluidPage(
+    navbarPage("",
+               
+   tabPanel(div(style="display: inline-block;",shinyWidgets::dropdown(label = 'Country',
+    fluidRow(
+        column(3,offset=0,
+       div(style="display: inline-block; align: center;",
+           uiOutput('countryFilterSettingNPI1UI'),
+           # br(),
+           # actionButton("selectAllEurope", "Select All"),
+           # actionButton("deselectAllEurope", "Deselect All")
+           #,
+    circle = F, status = "primary",
+    icon = icon("time"), width = "300px",
+    tooltip = tooltipOptions(title = "Click to modify inputs")
+)
+               
+               ),
+    
+      column(3,offset=0,
+       div(style = "padding: 0px 0px; margin-left:0.1%",
+        uiOutput('countryFilterSettingNPI2UI')
+        #,
+           # br(),
+           # actionButton("selectAllAsia", "Select All"),
+           # actionButton("deselectAllAsia", "Deselect All")
+       )),
+
+
+column(3,offset=0,
+       div(style = "padding: 0px 0px; margin-left:0.1%",
+           uiOutput('countryFilterSettingNPI3UI')
+           #,
+           # br(),
+           # actionButton("selectAllAmericas", "Select All"),
+           # actionButton("deselectAllAmericas", "Deselect All")
+       )),
+
+column(3,offset=0,
+       div(style = "padding: 0px 0px; margin-left:0.1%",
+           uiOutput('countryFilterSettingNPI4UI')
+           #,
+           # br(),
+           # actionButton("selectAllOther", "Select All"),
+           # actionButton("deselectAllOther", "Deselect All")
+       ))
+
+  )
+  ,
+    circle = F, status = "primary", width = "1000px",
+    tooltip = tooltipOptions(title = "Click to modify inputs")
+  ))),
+
+  tabPanel(div(style="display: inline-block;",shinyWidgets::dropdown(label = 'Exposure',
+    fluidRow(
+        column(4,offset=0,
+       div(style="display: inline-block; align: center;",
+                     uiOutput('sectorFilterSettingNPI1UI')
+           #,
+           # br(),
+           # actionButton("selectAllCorporates", "Select All"),
+           # actionButton("deselectAllCorporates", "Deselect All")
+       ))
+       ,
+    
+      column(4,offset=0,
+       div(style = "padding: 0px 0px; margin-left:0.1%",
+          uiOutput('sectorFilterSettingNPI2UI')
+          #,
+           # br(),
+           # actionButton("selectAllRetail", "Select All"),
+           # actionButton("deselectAllRetail", "Deselect All")
+       ))
+  )
+  ,
+    circle = F, status = "primary", width = "1000px",
+    tooltip = tooltipOptions(title = "Click to modify inputs")
+  ))),
+
+  tabPanel(
+                 div(style="display: inline-block; align: center;",shinyWidgets::dropdown(label='Portfolio',
+    fluidRow(
+        column(10,offset=0,
+       div(style = "padding: 0px 0px; margin-left:0.1%",
+          uiOutput('portfolioFilterSettingNPI1UI')
+       ))
+  ),
+    circle = F, status = "primary",
+    icon = icon("formula"), width = "300px",
+    tooltip = tooltipOptions(title = "Click to modify inputs")
+  ))),
+tabPanel(
+                 div(style="display: inline-block; align: center;",shinyWidgets::dropdown(label='Scenario',
+    fluidRow(
+        column(10,offset=0,
+       div(style = "padding: 0px 0px; margin-left:0.1%",
+          uiOutput('scenarioFilterSettingNPI1UI')
+       ))
+  ),
+    circle = F, status = "primary",
+    icon = icon("formula"), width = "300px",
+    tooltip = tooltipOptions(title = "Click to modify inputs")
+  ))),
+
+
+  tabPanel(
+div(style="display: inline-block; align: center;",
+                     shinyWidgets::dropdown(label='Measure',
+    fluidRow(
+       column(6,offset=0,
+          div(style = "padding: 0px 0px; margin-left:0.1%;",
+              uiOutput('measuresUINPI')
+              )
+            ),
+       column(6, offset=0
+                            )
+    ),
+    circle = F, status = "primary",
+    icon = icon("time"), width = "300px",
+    tooltip = tooltipOptions(title = "Click to modify inputs")
+)
+    
+  ))
+  ,
+  
+  tabPanel(
+                 div(style="display: inline-block; align: center; margin-bottom: 0px; margin-top: 0px; margin-right: 0px; margin-left: 0px; margin-top: -5px!important;",
+                     
+                      textInput(inputId = 'measureValueInputNPI', label = '', placeholder = 'Enter Value', width = '100px')
+              )
+           ),
+
+  tabPanel(
+div(style="display: inline-block; align: center;",
+                     shinyWidgets::dropdown(label='Risk Transfer',
+    fluidRow(
+       column(6,offset=0,
+          div(style = "padding: 0px 0px; margin-left:0.1%; width: 100px;",
+              uiOutput('riskTransferUINPI')
+              )
+            ),
+       column(6, offset=0
+                            )
+    ),
+    circle = F, status = "primary",
+    icon = icon("time"), width = "300px",
+    tooltip = tooltipOptions(title = "Click to modify inputs")
+)
+    
+  ))
+  ,
+
+  tabPanel(
+                 div(style="display: inline-block; align: center; margin-bottom: 0px; margin-top: 0px; margin-right: 0px; margin-left: 0px; margin-top: -5px!important;",
+                     
+                      textInput(inputId = 'riskTransferValueInputNPI', label = '', placeholder = 'Enter Value', width = '100px')
+              )
+           ),
+
+
+  tabPanel(div(style="display: inline-block;", actionButton('renewValueNPI', label = 'Set Values', style="color: #fff; background-color: green; border-color: green;"))),
+
+  tabPanel(div(style="display: inline-block;", actionButton('setRatingsNPI', label = 'Set Rating', style="color: #fff; background-color: green; border-color: green;")))
+
+  # tabPanel(div(style="display: inline-block;", actionButton('triggerRatingModalDialog', label = 'Set Rating', style="color: #fff; background-color: green; border-color: green;"))),
+
+  # tabPanel(div(style="display: inline-block;", actionButton('revertChangesPopUpNPI', label = 'Reset', style="color: black; background-color: white; border-color: green;"))),
+
+)
+, 
+# this script call can probably be removed...
+HTML("<script>var parent = document.getElementsByClassName('navbar-nav');
+parent[0].insertAdjacentHTML( 'afterend', '<ul class=\"nav navbar-nav navbar-right\"><li class=\"disabled\"><a href=\"#\"></a></li></ul>' );</script>")
+    ))
+
+# in some cases the first click does not fully register, setup a second automatic click 
+# HTML('<script>
+#      $( "#renewValueNPI" ).click(function() {
+#         $( this ).click();
+#         $( this ).off( event );
+#      });
+#      </script>')
+
+
+
+
+# in case user wants to reset all values
+# Return the UI for a modal dialog with data selection input. If 'failed' is
+    # TRUE, then display a message that the previous value was invalid.
+    dataModal <- function(failed = FALSE) {
+      modalDialog(
+        title = "Continue with reverting changes to the data?",
+        # actionButton('revertChanges', 'Revert All Changes', style="color: black; background-color: white; border-color: red; justify-content: center; display: flex; align-items: center;"),
+        size = "s",
+        easyClose = TRUE
+      )
+    }
+    
+        # Show modal when button is clicked.
+    observeEvent(input$revertChangesPopUpNPI, {
+      showModal(dataModal())
+    })
+    
+# initialise warning if rating inputs are off
+output$ratingFlagNPI <- renderText({''})
+    
+# Rating Input Overview 
+# Set Rating Values
+ratingModalNPI <- function(failed = FALSE) {
+    modalDialog(
+            br(),
+            fluidRow(width = 12,
+                 DT::dataTableOutput('ratingModalTableNPI')
+            ),
+            br(),
+            fluidRow(width = 12,
+                     column(width = 4,
+                            textInput('rating3PopupInputNPI', label = '', placeholder = 'AAA/AA/A')
+                            ),
+                     column(width = 4,
+                            textInput('rating4PopupInputNPI', label = '', placeholder = 'BBB')
+                            ),
+                     column(width = 4,
+                            textInput('rating5PopupInputNPI', label = '', placeholder = 'BB')
+                            )
+               ),
+            fluidRow(width = 12,
+               column(width = 4,
+                      textInput('rating6PopupInputNPI', label = '', placeholder = 'B')
+                      ),
+               column(width = 4,
+                      textInput('rating7PopupInputNPI', label = '', placeholder = 'CCC')
+                      ),
+               column(width = 4,
+                            textInput('rating8PopupInputNPI', label = '', placeholder = 'CC/C')
+                            )
+               ),
+            br(),
+            fluidRow(width = 12, 
+               column(width = 12,
+                      textOutput('ratingFlagNPI'),
+                      actionButton('applyRatingsToAllSelectedReplinesNPI', label = 'Set Ratings for Selected Replines', style="color: #fff; background-color: green; border-color: green;")
+                      )
+               ),
+    title = 'Set Ratings for New Production',
+    size = "s",
+    easyClose = TRUE
+  )
+}
+
+# datatable output for rating modal
+output$ratingModalTableNPI <- DT::renderDataTable({
+  
+  input$applyRatingsToAllSelectedReplinesNPI
+  input$renewValueNPI
+  input$sectorFilterSettingNPI1
+  input$sectorFilterSettingNPI2
+  
+  selectedData <- manipulatedData()$filteredInputDataNPI
+  
+  if ('BankNameShort' %in% colnames(selectedData) & 'ExposureReduced' %in% colnames(selectedData)){
+    setnames(selectedData, c('BankNameShort', 'ExposureReduced'), c('Bank', 'Exposure')) 
+  }
+  
+   # first set everything equal to all portfolios, overwrite with either SA or IRB
+  selectedData <- as.data.table(selectedData)
+  # for readability by user
+  selectedData[Country == '0', Country := 'All Countries']
+  selectedData[, Portfolio := 'All Portfolios']
+  selectedData[grepl('SA', ReplineID), Portfolio := 'SA']
+  selectedData[grepl('IRB', ReplineID), Portfolio := 'IRB']
+
+   selectedData <- selectedData[, c('Bank', 'Country', 'Exposure', 'Portfolio', paste0('New_Rating', 3:8)), with = FALSE]
+  
+   setnames(selectedData, paste0('New_Rating', 3:8), paste0('New Rating ', 3:8))
+  
+  #  rounding for new ratings
+  for (col in paste0('New Rating ', 3:8)){
+    selectedData[[col]] <- round(selectedData[[col]], 4)
+  }
+  setnames(selectedData, paste('New Rating',3:8), c('AAA/AA/A','BBB','BB','B','CCC','CC/C'))
+  colnames(selectedData) <- paste0('<span style="color:',"white",'">', c(colnames(selectedData)[1], colnames(selectedData)[2:length(colnames(selectedData))]),'</span>')
+
+  DT::datatable(selectedData,escape=F,options=list(lengthChange = FALSE, searching=FALSE, scrollY=T, scrollX=T, paging=F,bInfo=F)) %>%
+      formatStyle(columns = c(0:ncol(selectedData)), color = tableTextColor, backgroundColor = backgroundcolorTables) 
+  
+})
+
+
+# Show modal when button is clicked.
+observeEvent(input$setRatingsNPI, {
+  showModal(ratingModalNPI())
+})
+    
+
+
+  
+```
+
+
+Row
+-------------------------------------
+
+### <span style="color:`r borderTextColor`">New Production Input Data</span>
+
+
+```{r}
+DT::renderDataTable({
+  # to allow the manipulatedData to be updated we wait before updating the table
+  # invalidateLater(500, session)
+  
+  input$renewValueNPI
+  input$sectorFilterSettingNPI1
+  input$sectorFilterSettingNPI2
+
+  selectedData <- manipulatedData()$filteredInputDataNPI
+  
+  selectedData[[input$measureSelectedNPI]] <- round(selectedData[[input$measureSelectedNPI]], 4)
+  selectedData[[input$riskTransferSelectedNPI]] <- round(selectedData[[input$riskTransferSelectedNPI]], 4)
+
+  
+  # correspondence list new and current parameters
+  translationList <- c('New_CPR' = NA, 'New_ExposureGrowthRate' = NA, 
+    'New_Maturity_numeric' = 'Maturity_numeric', 'New_rate' = NA, 'New_fee' = NA, 
+    'New_CCF' = 'CCF', 'New_lgd' = 'lgd', 'New_Default' = 'Default', 'New_downturnlgd' = 'downturnlgd',
+    'HurdleRate' = NA, 'CT1_Target' = NA, 'Dividend' = NA, 'PercSynd' = NA,
+    "New_DebtFundUpfrontFee" = NA, "New_SyndUpfrontFee" = NA,
+    'CostIncomeRatio' = NA, 'TaxRate' = NA,
+    'PercCRT' = NA, 'SizeFLP' = NA, 'SpreadFLP' = NA, 'RW_RetainedSenior' = NA,
+    'PercDebtFund' = NA, 'debtfund_fee' = NA, 'New_FTP_Rate' = 'FTP_Rate', 'New_CLTV' = 'CLTV',
+    'New_Rating3' = 'Rating3', 'New_Rating4' = 'Rating4', 'New_Rating5' = 'Rating5', 
+    'New_Rating6' = 'Rating6', 'New_Rating7' = 'Rating7', 'New_Rating8' = 'Rating8')
+  
+  if ('BankNameShort' %in% colnames(selectedData) & 'ExposureReduced' %in% colnames(selectedData)){
+    setnames(selectedData, c('BankNameShort', 'ExposureReduced'), c('Bank', 'Exposure')) 
+  }
+  
+   # first set everything equal to all portfolios, overwrite with either SA or IRB
+  selectedData <- as.data.table(selectedData)
+  # for readability by user
+  selectedData[Country == '0', Country := 'All Countries']
+  selectedData[, Portfolio := 'All Portfolios']
+  selectedData[grepl('SA', ReplineID), Portfolio := 'SA']
+  selectedData[grepl('IRB', ReplineID), Portfolio := 'IRB']
+
+
+  productionVariableEquivalent <- translationList[names(translationList) %in% input$measureSelectedNPI]
+  # there might not be a current variable equivalent
+  if (!is.na(productionVariableEquivalent)){
+    selectedData <- as.data.table(selectedData)
+    selectedData <- selectedData[, c('Bank', 'Country', 'Exposure', 'Portfolio', input$measureSelectedNPI, productionVariableEquivalent, input$riskTransferSelectedNPI), with = FALSE]  
+    selectedData[[productionVariableEquivalent]] <- round(selectedData[[productionVariableEquivalent]], 4)
+  } else {
+    selectedData <- selectedData[, c('Bank', 'Country', 'Exposure', 'Portfolio', input$measureSelectedNPI, input$riskTransferSelectedNPI), with = FALSE]
+  }
+  
+  colnames(selectedData) <- paste0('<span style="color:',"white",'">', c(colnames(selectedData)[1], colnames(selectedData)[2:length(colnames(selectedData))]),'</span>')
+  
+  
+  DT::datatable(selectedData,escape=F,options=list(searching=FALSE, scrollY=paste0(as.character(420),'px'), scrollX=T, paging=F,bInfo=F)) %>%
+      formatStyle(columns = c(0:ncol(selectedData)), color = tableTextColor, backgroundColor = backgroundcolorTables)
+})
+
+```
+
+
+### <span style="color:`r borderTextColor`">ROE Waterfall New Production (reporting in BPS)</span> {.bgred}
+
+```{r}
+
+waterFallPlotNPI <- reactive({
+
+# function for waterfall plot
+createWaterfall <- function(dfNames,dfValues,isSum,isIntermediateSum,title,subTitle,xTitle,yTitle, thm){
+
+
+  #dfValues <- dfValues/dfValues[1]*100
+
+  df <- data.frame(name = dfNames,y = dfValues,stringsAsFactors = FALSE,
+                   isSum = as.logical(isSum),
+                   isIntermediateSum = as.logical(isIntermediateSum))
+
+  df <- df %>%
+    mutate(color = ifelse(y>0,lineColors[1],ifelse(y<0,lineColors[4],NA)))
+
+  maxY = max(cumsum(na.omit(dfValues)))      #sum(na.omit(dfValues[dfValues > 0])) + 1
+  minY = min(c(0,cumsum(na.omit(dfValues))))  #sum(na.omit(dfValues[dfValues < 0])) +100 - 1
+
+  datSeries <- list_parse(df)
+
+  highchart() %>%
+    hc_chart(type = "waterfall") %>%
+    #hc_title(text = title) %>%
+    #hc_subtitle(text = subTitle) %>%
+    hc_xAxis(categories = df$name,
+             title=list(text=xTitle)) %>%
+    hc_yAxis(title=list(text=yTitle), max = maxY, min = minY) %>%
+    hc_legend(enabled=FALSE) %>%
+    hc_tooltip(pointFormat="{point.y:,.2f}") %>%
+    hc_series(list(color=lineColors[9],
+                   data=datSeries,
+                   dataLabels=list(
+                     enabled=TRUE,
+                     format = '{point.y:,.2f}',
+                     style=list(
+                       fontWeight="bold",
+                       textShadow="0px 0px 3px black")),
+                   pointPadding=0)) %>%
+    hc_add_theme(thm)
+}
+
+countryFilterSetting <- as.vector(c(input$countryFilterSettingNPI1, input$countryFilterSettingNPI2, input$countryFilterSettingNPI3, input$countryFilterSettingNPI4))
+sectorFilterSetting <- as.vector(c(input$sectorFilterSettingNPI1, input$sectorFilterSettingNPI2))
+
+DT <- results()[PoolCutoffDate == sort(unique(PoolCutoffDate))[2] &
+                (BankNameShort %in% sub("_EBAData2017Q2_Results.RData", "",input$bankDataSelectedSidebar)| BankNameShort %in% sub("_FDICData2018Q1_Results.RData", "",input$bankDataSelectedSidebar)) &
+                Country %in% countryFilterSetting &
+                ExposureReduced %in% sectorFilterSetting &
+                PortfolioLabel %in% input$Formula_Selected_NPI &
+                Scenario == input$Scenario_Selected_NPI, ] # %in% is a dirty way to deal with _ in three of four scenarios
+
+TotalLimit_ARTSum <- sum(DT$TotalLimit_ART)
+
+Gross_Interest_Income <- round(10000 * sum(4 * DT$GII_ART) / TotalLimit_ARTSum, 2) # annualised GII
+FTP <- - round(10000 * sum(DT[, New_FTP_Rate * DrawnAmount * currentinterestrate]) / TotalLimit_ARTSum, 2)
+Overhead_Cost <- - round(10000 * sum(DT[, CostIncomeRatio * (4 * NII_ART)]) / TotalLimit_ARTSum, 2) # annualised NII
+Credit_Cost_1Y <- - round(10000 * sum(DT$ECL_1Y) / TotalLimit_ARTSum, 2)
+CRT_cost_ann <- - round(10000 * sum(DT$CRT_cost * 4) / TotalLimit_ARTSum, 2) # annualised CRT cost
+Net_Income <- Gross_Interest_Income + FTP + Overhead_Cost + Credit_Cost_1Y + CRT_cost_ann
+Tax <- - round(Net_Income * weighted.mean(x = DT$TaxRate, w = DT$TotalLimit_ART), 2)
+NI_After_Tax <- Net_Income + Tax
+
+dfValues <- c(Gross_Interest_Income, FTP, Overhead_Cost, Credit_Cost_1Y, CRT_cost_ann, NA, Tax, NA)
+dfNames  <- c("Gross Interest Income (ART)", "FTP (ART)", "Cost (ART)", "1Y Credit Cost (ART)", "CRT Cost", "Net Income (ART)", "Tax (ART)","NI After Tax (ART)")
+isIntermediateSum = c(0,0,0,0,0,1,0,0)
+isSum = c(0,0,0,0,0,0,0,1)
+
+hcWaterfall <- createWaterfall(dfNames, dfValues, isSum, isIntermediateSum,"ROE waterfall of costs and income", "Reporting in BPS of total amount used","","As BPS of total used amount", thm)
+
+return(hcWaterfall)
+
+})
+
+renderHighchart({
+  if(nrow(results())==0 ) return(whitechart)
+  waterFallPlotNPI()
+})
+
+
+```
+
+
+Row
+-------------------------------------
+
+### <span style="color:`r borderTextColor`"> New Production EAD, Drawn, Undrawn and Limit</span> {.bgred} 
+
+```{r}
+renderHighchart({ 
+   EADDrawnUndrawnLimitFigureNPI() 
+}) 
+ 
+```
+
+```{r}
+
+EADDrawnUndrawnLimitFigureNPI <- reactive({
+
+   countryFilterSetting <- as.vector(c(input$countryFilterSettingNPI1, input$countryFilterSettingNPI2, input$countryFilterSettingNPI3, input$countryFilterSettingNPI4))
+   sectorFilterSetting <- as.vector(c(input$sectorFilterSettingNPI1, input$sectorFilterSettingNPI2))
+
+DTL <- results()[PoolCutoffDate > min(PoolCutoffDate) &
+                (BankNameShort %in% sub("_EBAData2017Q2_Results.RData", "",input$bankDataSelectedSidebar)| BankNameShort %in% sub("_FDICData2018Q1_Results.RData", "",input$bankDataSelectedSidebar)) &
+                Country %in% countryFilterSetting &
+                ExposureReduced %in% sectorFilterSetting &
+                PortfolioLabel %in% input$Formula_Selected_NPI &
+                Scenario == input$Scenario_Selected_NPI, ] # four scenarios
+
+   
+   #millionDivisor <- 1000
+   EADDrawnUndrawnLimit <- DTL[, 
+                    list(`EAD` = round(sum(EAD, na.rm = TRUE)/1000, 4), 
+                        `Drawn Amount` = round(sum(DrawnAmount, na.rm = TRUE)/1000, 4), 
+                        `Undrawn Amount` = round(sum(UndrawnAmount, na.rm = TRUE)/1000, 4),
+                        `Total Limit` = round(sum(TotalLimit, na.rm = TRUE)/1000, 4)),  
+                   by = 'DateYQ'] 
+
+   # gather to get the data into highchart format (it condenses the information in EADRWA's column 2, 3, and 4) 
+   EADDrawnUndrawnLimit <- gather(EADDrawnUndrawnLimit, "variable", "value", c(2, 3, 4, 5)) 
+   EADDrawnUndrawnLimit <- EADDrawnUndrawnLimit[order(EADDrawnUndrawnLimit$DateYQ), ] 
+   EADDrawnUndrawnLimit <- as.data.table(EADDrawnUndrawnLimit) 
+   # for now set to below min(DateYQ) + 10, could perhaps be made interactive, to be decided 
+   EADDrawnUndrawnLimit <- EADDrawnUndrawnLimit[DateYQ < min(DateYQ) + 10, ] 
+
+   return(hchart(EADDrawnUndrawnLimit, "column", hcaes(x = DateYQ, y = value, group = variable), borderWidth = 0) %>% 
+     hc_colors(c(lineColors[c(7, 4, 1)], 'green')) %>%  
+     hc_add_theme(thm) %>% 
+     hc_yAxis(labels=list(format = '{value} BN'))) 
+     # hc_xAxis(title=list(text='MM')) %>% 
+     # hc_yAxis(title=list(text='Date'))
+       
+     
+})
+
+```
+
+### <span style="color:`r borderTextColor`">New Production RWA</span> <span style="color:`r borderTextColor`"></span> {.bgred}
+
+```{r}
+
+  
+ 
+renderHighchart({ 
+     if(nrow(results())==0 ) return(whitechart) 
+     B3B4PlotNPI() 
+}) 
+ 
+
+
+```
+
+```{r}
+
+B3B4PlotNPI <- reactive({
+
+  countryFilterSetting <- as.vector(c(input$countryFilterSettingNPI1, input$countryFilterSettingNPI2, input$countryFilterSettingNPI3, input$countryFilterSettingNPI4))
+  sectorFilterSetting <- as.vector(c(input$sectorFilterSettingNPI1, input$sectorFilterSettingNPI2))
+
+  results <- results()[(BankNameShort %in% sub("_EBAData2017Q2_Results.RData", "",input$bankDataSelectedSidebar)| BankNameShort %in% sub("_FDICData2018Q1_Results.RData", "",input$bankDataSelectedSidebar)) &
+                PoolCutoffDate > min(PoolCutoffDate) &
+                Country %in% countryFilterSetting &
+                ExposureReduced %in% sectorFilterSetting &
+                PortfolioLabel %in% input$Formula_Selected_NPI &
+                Scenario == input$Scenario_Selected_NPI, ] # the %in% c is a (dirty) solution to fix the _ in three of four scenarios
+  
+  # by period plot
+  RWA <- results[, list(`RWA B3 IRBA` = round(sum(RWA_B3IRBA, na.rm = TRUE)/1000, 4),
+                       `RWA B3 SA` = round(sum(RWA_B3SA, na.rm = TRUE)/1000, 4),
+                       `RWA B4 IRBA` = round(sum(RWA_B4IRBA, na.rm = TRUE)/1000, 4),
+                       `RWA B4 SA` = round(sum(RWA_B4SA, na.rm = TRUE)/1000, 4),
+                       `RWA IRBA-SA Floor` = round(sum(RWA_IRBA_Floor, na.rm = TRUE)/1000, 4),
+                       `RWA SA Actual` = round(sum(RWA_SA_Actual, na.rm = TRUE)/1000, 4),
+                       `RWA IRBA Actual` = round(sum(RWA_IRBA_Actual, na.rm = TRUE)/1000, 4)
+                       ), by = 'DateYQ']
+
+  # gather to get the data into highchart format (it condenses the information in RWA's column 2, 3, and 4)
+  RWAData <- gather(RWA, "variable", "value", c(2, 3, 4, 5, 6, 7, 8))
+  RWAData <- RWAData[order(RWAData$DateYQ), ]
+  RWAData <- as.data.table(RWAData)
+  # for now set to below min(DateYQ) + 10, could perhaps be made interactive
+  RWAData <- RWAData[DateYQ < min(DateYQ) + 10, ]
+
+  return(hchart(RWAData, "column", hcaes(x = DateYQ, y = value, group = variable), borderWidth = 0) %>%
+                  hc_colors(c(lineColors[c(7,8,6:2)], 'green')) %>% # select 9, 7, 5, 3 for high contrast
+                  hc_add_theme(thm) %>%
+                  hc_yAxis(labels=list(format = '{value} BN'))) 
+                  # hc_xAxis(title=list(text='MM')) %>%
+                  # hc_yAxis(title=list(text='Date'))
+         
+
+  
+})
+
+
+```
+
+### <span style="color:`r borderTextColor`">EAD by Vintage</span> <span style="color:`r borderTextColor`"></span> {.bgred}
+
+```{r}
+
+renderHighchart({
+  
+    # combine all country filter settings  
+  countryFilterSetting <- as.vector(c(input$countryFilterSettingNPI1, input$countryFilterSettingNPI2, input$countryFilterSettingNPI3, input$countryFilterSettingNPI4))
+  # combine all sector filter settings
+  sectorFilterSetting <- as.vector(c(input$sectorFilterSettingNPI1, input$sectorFilterSettingNPI2))
+  # no combination of bank filter settings, only one group of filters (see structure inside dropdown menu)
+
+  segmentedData <- results()[
+                (BankNameShort %in% sub("_EBAData2017Q2_Results.RData", "",input$bankDataSelectedSidebar)| BankNameShort %in% sub("_FDICData2018Q1_Results.RData", "",input$bankDataSelectedSidebar)) &
+                Country %in% countryFilterSetting &
+                ExposureReduced %in% sectorFilterSetting &
+                PortfolioLabel %in% input$Formula_Selected_NPI &
+                Scenario ==  input$Scenario_Selected_NPI, ]
+
+  selectedScenario  <- input$Scenario_Selected_NPI
+
+  resultsFil_ch <- segmentedData
+  # replace  0 by NA if the Poolcutoff = DateYQ since new production will not have defaults
+  resultsFil_ch[DateYQ == PoolCutoffDate , MarginalDefault := NA]
+  # vintage name used for labeling
+  resultsFil_ch[, PoolCutoffDate := as.character(PoolCutoffDate)]
+  resultsFil_tmp <- copy(resultsFil_ch)
+  resultsFil_tmp[, PoolCutoffDate := "All selected production"]
+  resultsFil_tmp <- rbind(resultsFil_ch, resultsFil_tmp)
+  
+  colUsed <- vintageColor[1:(length(unique(resultsFil_tmp$PoolCutoffDate)))]
+  
+  poolSummary <- resultsFil_ch[, .(ead = sum(EAD)),
+                            by=c("DateYQ", "Scenario", "PoolCutoffDate")]
+  
+  CCAR <- FALSE
+  if(length(grep('Severe|severe',poolSummary$Scenario))>0) {
+    CCAR <- TRUE
+  }
+  poolSummary <- poolSummary[Scenario == selectedScenario]
+  poolSummary <- relabelScenario(poolSummary, "Scenario", CCAR)
+   
+  poolSummaryLong <- melt(poolSummary, id.vars = c('DateYQ','Scenario', 'PoolCutoffDate'))
+  setorder(poolSummaryLong, DateYQ, Scenario, PoolCutoffDate)
+  poolSummaryLong$variable  <- as.character(poolSummaryLong$variable)
+  
+  relevantVar <- unique(grep(paste0("ead"), poolSummaryLong$variable, value = T))
+  
+  # loss_vint_list <- lapply(sort(unique(poolSummaryLong$PoolCutoffDate), decreasing = T), 
+  #                           function(x) list(data = 
+  #                                              merge(poolSummaryLong[variable %in%relevantVar
+  #                     & PoolCutoffDate == x,
+  #                     .(DateYQ , value) ] , 
+  #                     data.table(DateYQ = unique(poolSummaryLong[, DateYQ ])), all.y = T,
+  #                     by = "DateYQ")[, round(value/1000,4)]
+  #                     , name = x ))
+  
+   ead_vint_list <- lapply(sort(unique(poolSummaryLong$PoolCutoffDate), decreasing = T), 
+                            function(x) list(data = 
+                                               merge(poolSummaryLong[variable %in%relevantVar
+                      & PoolCutoffDate == x,
+                      .(DateYQ , value) ] , 
+                      data.table(DateYQ = unique(poolSummaryLong[, DateYQ ])), all.y = T,
+                      by = "DateYQ")[, round(value/1000,4)]
+                      , name = x ))
+  
+  graph_ead_vint <-  highchart() %>%  hc_chart(type = "area") %>% 
+    hc_title(text = "") %>%  hc_subtitle(text = "") %>%
+    hc_xAxis(categories = sort(unique(poolSummaryLong[variable %in% relevantVar, DateYQ])),
+           tickmarkPlacement = "on",
+           title = list(enabled = FALSE)) %>% 
+  hc_yAxis(labels=list(format = '{value} BN')) %>% 
+  hc_plotOptions(area = list(
+    stacking = "value",
+    lineColor = "#ffffff",
+    lineWidth = 1,
+    marker = list(
+      lineWidth = 1,
+      lineColor = "#ffffff"
+    ))
+  ) %>% 
+    hc_add_series_list(ead_vint_list) %>%
+    hc_add_theme(thm) %>%  hc_colors(rev(colUsed)[-1])
+# >>>>>>> master
+  
+})
+
+```

@@ -1,0 +1,163 @@
+
+Introduction {data-orientation=columns}
+=====================================================================  
+
+<!-- This page provides introduction -->
+```{r}
+
+shinyUI(
+  fluidPage(
+
+HTML(paste0('
+     <body class="landing-page landing-page2">
+        <div class="wrapper">
+            <div class="parallax filter-gradient blue" data-color="blue">
+                <div class= "container">
+                </div>
+            </div>
+            <div class="sectionLandingPage section-darkblue section-clients">
+                <div class="container text-center">
+                    <h3 class="header-text"><b><span style="color: white">Metis</span></b></h3>
+                    <h3 class="header-text"><span style="color: white"></span></h3>
+                    <p>
+                    </p>
+                </div>
+            </div>
+            <div class="sectionLandingPage section-presentation">
+               <div class="">
+                    <h4 class="header-text text-center">Bank Balance Sheet Analyzer</h4>
+                    <div class="row">
+                      <div class="container" style="width:80%;">
+                        <div class="col-md-3">
+                            <div class="card card-blue">
+                                <div class="text">
+                                    <h4>Bank Balance Sheet Analytics</h4>
+                                    <p>Visual representation of bank lending portfolios for strategic planning, credit portfolio management, and balance sheet optimization. METIS projects the future balance sheet of each bank by main asset class and country in different macroeconomic and regulatory environments. </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card card-blue">
+                                <div class="text">
+                                    <h4>Regulatory Considerations</h4>
+                                    <p>METIS explores the regulatory environment for Basel III and IV, IFRS9, stress testing, CCAR and CECL top-down on a subportfolio level. The sister tool ATHENA analyzes the risk transfer transactions and regulatory effects bottom-up at loan level.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card card-blue">
+                                <div class="text">
+                                    <h4>Identifying and Optimizing New Lending and Risk Transfer Strategies</h4>
+                                    <p>METIS identifies the costs and benefits of new origination and risk transfer strategies in the different business lines and countries. ATHENA optimizes the loan selection and transaction structure of individual transaction portfolios.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card card-blue">
+                                <div class="text">
+                                    <h4>Additional Advantages</h4>
+                                    <p><li>Peer-to-peer benchmarking across many banks, countries, and asset classes based on public disclosure</li>
+<li>Private, "inside-the-firewall" implementation available for use of internal data and models</li>
+<li>Point-in-time rating migration, default, and loss challenger models for stress testing and loan loss provisioning validated in the US and EU</li> 
+<li>Secure, cloud-based delivery mechanism available on all internet enabled devices</li> 
+<li>Regular updates on the latest regulatory changes and public disclosures.
+</li></p>
+                                </div>
+                            </div>
+                        </div>
+                      </div>
+                    </div>
+                </div>
+            </div>
+            <div class="sectionLandingPage section-darkblue section-features">
+                <div class="container">
+                <span style="color: white">
+                    <h4 class="header-text text-center"><span style="color: white">Documentation</span></h4>
+                    <div class="row">
+                            <div class="col-md-3 container text center-block card card-blue" style="margin: auto; width: 50%;">
+                                <h4>Manual and Documentation</h4>
+                                <p>The user manual explains in details the functionality of METIS. The document provides explanations for global settings and features as well as illustrations regarding each dashboard page</p>
+                            ',
+                              downloadButton('downloadUserManual', label = 'Download', class = "btn-primary"),'              
+                            </div>
+                            <div class="col-md-3 container text center-block card card-blue" style="margin: auto; width: 50%;">
+                                <h4>Estimation of IFRS 9 Expected Credit Losses</h4>
+                                <p>This document describes the requirements from IFRS9 for the estimation of expected credit
+losses (ECL) and the methodology developed by OSIS to meet these requirements. The methodology is generic and has been implemented in several financial institutions</p>
+                            ',
+                              downloadButton('downloadIFRS9Documentation', label = 'Download', class = "btn-primary"),'              
+                            </div>
+                    </div>
+                </span>
+              </div>
+            </div>
+           <div class="sectionLandingPage section section-clients">
+              <div class="container text-center">
+                <h3 class="header-text"><span style="color: rgb(38, 70, 99)"><b>Open Source Investor Services B.V.</b></span></h4>
+                <div id="banner">  
+                 <!-- <div class="inline-blockLandingPage">
+                    <img src="assets/img/logos/OSIS-logo-180px.png">
+                </div> -->
+              </div>
+            </div>
+            </div>
+            <div class="sectionLandingPage section section-clients">
+                <div class="container text-center">
+                    <h3 class="header-text"></h3>
+                    <div id="banner">
+                      <div class="inline-blockLandingPage">
+                         <img src ="assets/img/services.png">
+                      </div>
+                    </div>                    
+                </div>
+            </div>
+            <div class="sectionLandingPage section section-clients">
+                <div class="container text-center">
+                    <h2></h2>
+                    <p>
+                    </p>
+                    <div id="banner">
+                      <div class="inline-blockLandingPage">
+                      </div>
+                    </div>                    
+                </div>
+            </div>
+            <footer class="footer">
+                <div class="container">
+                    <nav class="pull-left">
+                        <ul>
+                            <li>
+                                <a href="http://www.os-is.com/about-us/key-people/" target="_blank">
+                                Key People
+                                </a>
+                            </li>
+                            <li>
+                                <a href="http://www.os-is.com/news-events/research/" target="_blank">
+                                Research & Webinars
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                    <div class="social-area pull-right">
+                        <a class="btn btn-social btn-twitter btn-simple">
+                        <a href="https://twitter.com/OSIStweet" target="_blank"</a>
+                        <i class="fa fa-twitter"></i>
+                        </a>
+                        <a class="btn btn-social btn-linkedin btn-simple">
+                        <a href="https://www.linkedin.com/company/open-source-investor-services-b-v-?trk=prof-exp-company-name" target="_blank"</a>
+                        <i class="fa fa-linkedin"></i>
+                        </a>
+                    </div>
+                    <div class="copyright">
+                        &copy; 2018 <a href="http://www.os-is.com" target="_blank">Open Source Investor Services</a>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </body>')
+    )    
+  )
+)
+
+```
+

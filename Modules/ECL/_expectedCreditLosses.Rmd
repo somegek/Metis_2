@@ -1,0 +1,542 @@
+Expected Credit Losses {data-icon="fa-search"}
+=====================================
+
+```{r}
+
+###################################################################
+#### This chunk contains the inputs on the Bank Data Overview page
+#### First we create conditional inputs with renderUI
+#### Second we create the logic for the select all/unselect all buttons
+#### Third, we create logic for the measure selection, which has to be dependent on each other
+####    it consists of multiple menus but they should only allow one item to be selected across all menus
+#### Fourth we render everything in a navbar
+####################################################################
+
+#### First we create conditional inputs with renderUI
+
+# output$countryFilterSettingECL1UI <- renderUI({
+#   checkboxGroupButtons(inputId = "countryFilterSettingECL1", 
+#                        label = "Europe", choices = countriesShortCodeContinent[Continent == 'Europe', Country][which(countriesShortCodeContinent[Continent == 'Europe', Country] %in% inputs[BankNameShort %in% input$bankFilterSettingECL, Country])], individual = TRUE, 
+#                        checkIcon = checkIconList)
+# })
+# 
+# output$countryFilterSettingECL2UI <- renderUI({
+#   checkboxGroupButtons(inputId = "countryFilterSettingECL2", 
+#                        label = "Asia", choices = countriesShortCodeContinent[Continent == 'Asia', Country][which(countriesShortCodeContinent[Continent == 'Asia', Country] %in% inputs[BankNameShort %in% input$bankFilterSettingECL, Country])], individual = TRUE, 
+#                        checkIcon = checkIconList)
+# })
+# 
+# output$countryFilterSettingECL3UI <- renderUI({
+#   
+#   checkboxGroupButtons(inputId = "countryFilterSettingECL3", 
+#                        label = "Americas", choices = countriesShortCodeContinent[Continent == 'Americas', Country][which(countriesShortCodeContinent[Continent == 'Americas', Country] %in% inputs[BankNameShort %in% input$bankFilterSettingECL, Country])], individual = TRUE, 
+#                        checkIcon = checkIconList)
+#   
+# })
+# 
+# output$countryFilterSettingECL4UI <- renderUI({
+#   
+#   checkboxGroupButtons(inputId = "countryFilterSettingECL4", 
+#                        label = "Other", choices = countriesShortCodeContinent[!Continent %in% c('Americas', 'Asia', 'Europe'), Country][which(countriesShortCodeContinent[!Continent %in% c('Americas', 'Asia', 'Europe'), Country] %in% inputs[BankNameShort %in% input$bankFilterSettingECL, Country])], individual = TRUE, 
+#                        checkIcon = checkIconList)
+#   
+# })
+# 
+# output$sectorFilterSettingECL1UI <- renderUI({
+#   checkboxGroupButtons(inputId = "sectorFilterSettingECL1", 
+#                        label = "Corporates", choices = setdiff(unique(inputs[BankNameShort %in% input$bankFilterSettingECL & Country %in% c(input$countryFilterSettingECL1, input$countryFilterSettingECL2, input$countryFilterSettingECL3, input$countryFilterSettingECL4), ExposureReduced])[!grepl(c('Retail'), unique(inputs[BankNameShort %in% input$bankFilterSettingECL & Country %in% c(input$countryFilterSettingECL1, input$countryFilterSettingECL2, input$countryFilterSettingECL3, input$countryFilterSettingECL4), ExposureReduced]))], 'Corporates'), individual = TRUE, 
+#                        checkIcon = checkIconList)
+# })
+# 
+# output$sectorFilterSettingECL2UI <- renderUI({
+#   checkboxGroupButtons(inputId = "sectorFilterSettingECL2", 
+#                        label = "Retail", choices = setdiff(unique(inputs[BankNameShort %in% input$bankFilterSettingECL & Country %in% c(input$countryFilterSettingECL1, input$countryFilterSettingECL2, input$countryFilterSettingECL3, input$countryFilterSettingECL4), ExposureReduced])[grepl('Retail', unique(inputs[BankNameShort %in% input$bankFilterSettingECL & Country %in% c(input$countryFilterSettingECL1, input$countryFilterSettingECL2, input$countryFilterSettingECL3, input$countryFilterSettingECL4), ExposureReduced]))], 'Retail'), individual = TRUE, 
+#                        checkIcon = checkIconList)
+# })
+# 
+# #### Second we create the logic for the select all/unselect all buttons
+# 
+# # for later reference in this second part, but also third part
+# checkIconList <- list(yes = tags$i(class = "fa fa-circle", 
+#                                    style = "color: steelblue"), 
+#                       no = tags$i(class = "fa fa-circle-o", 
+#                                   style = "color: steelblue"))
+# 
+# # Bank dropdown
+# observeEvent(input$selectAllBankECL, {
+#   shinyWidgets::updateCheckboxGroupButtons(session, "bankFilterSettingECL", "Bank Setting", choices=unique(inputs$BankNameShort), selected=unique(inputs$BankNameShort), checkIcon = checkIconList)
+# })
+# observeEvent(input$deselectAllBankECL, {
+#   shinyWidgets::updateCheckboxGroupButtons(session, "bankFilterSettingECL", "Bank Setting", choices=unique(inputs$BankNameShort), selected=NULL, checkIcon = checkIconList)
+# })
+# # Country dropdown
+# # Europe
+# observeEvent(input$selectAllEuropeECL, {
+#   shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingECL1", "Europe", choices=countriesShortCodeContinent[Continent == 'Europe', Country][which(countriesShortCodeContinent[Continent == 'Europe', Country] %in% inputs[BankNameShort %in% input$bankFilterSettingECL, Country])], selected=countriesShortCodeContinent[Continent == 'Europe', Country][which(countriesShortCodeContinent[Continent == 'Europe', Country] %in% inputs[BankNameShort %in% input$bankFilterSettingECL, Country])], checkIcon = checkIconList)
+# })
+# observeEvent(input$deselectAllEuropeECL, {
+#   shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingECL1", "Bank Setting", choices=countriesShortCodeContinent[Continent == 'Europe', Country][which(countriesShortCodeContinent[Continent == 'Europe', Country] %in% inputs[BankNameShort %in% input$bankFilterSettingECL, Country])], selected=NULL, checkIcon = checkIconList)
+# })
+# # Asia
+# observeEvent(input$selectAllAsiaECL, {
+#   shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingECL2", "Asia", choices=countriesShortCodeContinent[Continent == 'Asia', Country][which(countriesShortCodeContinent[Continent == 'Asia', Country] %in% inputs[BankNameShort %in% input$bankFilterSettingECL, Country])], selected=countriesShortCodeContinent[Continent == 'Asia', Country][which(countriesShortCodeContinent[Continent == 'Asia', Country] %in% inputs[BankNameShort %in% input$bankFilterSettingECL, Country])], checkIcon = checkIconList)
+# })
+# observeEvent(input$deselectAllAsiaECL, {
+#   shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingECL2", "Asia", choices=countriesShortCodeContinent[Continent == 'Asia', Country][which(countriesShortCodeContinent[Continent == 'Asia', Country] %in% inputs[BankNameShort %in% input$bankFilterSettingECL, Country])], selected=NULL, checkIcon = checkIconList)
+# })
+# # Americas
+# observeEvent(input$selectAllAmericasECL, {
+#   shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingECL3", "Americas", choices=countriesShortCodeContinent[Continent == 'Americas', Country][which(countriesShortCodeContinent[Continent == 'Americas', Country] %in% inputs[BankNameShort %in% input$bankFilterSettingECL, Country])], selected=countriesShortCodeContinent[Continent == 'Americas', Country][which(countriesShortCodeContinent[Continent == 'Americas', Country] %in% inputs[BankNameShort %in% input$bankFilterSettingECL, Country])], checkIcon = checkIconList)
+# })
+# observeEvent(input$deselectAllAmericasECL, {
+#   shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingECL3", "Americas", choices=countriesShortCodeContinent[Continent == 'Americas', Country][which(countriesShortCodeContinent[Continent == 'Americas', Country] %in% inputs[BankNameShort %in% input$bankFilterSettingECL, Country])], selected=NULL, checkIcon = checkIconList)
+# })
+# # Other
+# observeEvent(input$selectAllOtherECL, {
+#   shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingECL4", "Other", choices=countriesShortCodeContinent[!Continent %in% c('Americas', 'Asia', 'Europe'), Country][which(countriesShortCodeContinent[!Continent %in% c('Americas', 'Asia', 'Europe'), Country] %in% inputs[BankNameShort %in% input$bankFilterSettingECL, Country])], selected=countriesShortCodeContinent[!Continent %in% c('Americas', 'Asia', 'Europe'), Country][which(countriesShortCodeContinent[!Continent %in% c('Americas', 'Asia', 'Europe'), Country] %in% inputs[BankNameShort %in% input$bankFilterSettingECL, Country])], checkIcon = checkIconList)
+# })
+# observeEvent(input$deselectAllOtherECL, {
+#   shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingECL4", "Other", choices=countriesShortCodeContinent[!Continent %in% c('Americas', 'Asia', 'Europe'), Country][which(countriesShortCodeContinent[!Continent %in% c('Americas', 'Asia', 'Europe'), Country] %in% inputs[BankNameShort %in% input$bankFilterSettingECL, Country])], selected=NULL, checkIcon = checkIconList)
+# })
+# # Sector dropdown
+# # corporates
+# observeEvent(input$selectAllCorporatesECL, {
+#   shinyWidgets::updateCheckboxGroupButtons(session, "sectorFilterSettingECL1", "Corporates", choices=setdiff(unique(inputs[BankNameShort %in% input$bankFilterSettingECL & Country %in% c(input$countryFilterSettingECL1, input$countryFilterSettingECL2, input$countryFilterSettingECL3, input$countryFilterSettingECL4), ExposureReduced])[!grepl(c('Retail'), unique(inputs[BankNameShort %in% input$bankFilterSettingECL & Country %in% c(input$countryFilterSettingECL1, input$countryFilterSettingECL2, input$countryFilterSettingECL3, input$countryFilterSettingECL4), ExposureReduced]))], 'Corporates'), selected=setdiff(unique(inputs[BankNameShort %in% input$bankFilterSettingECL & Country %in% c(input$countryFilterSettingECL1, input$countryFilterSettingECL2, input$countryFilterSettingECL3, input$countryFilterSettingECL4), ExposureReduced])[!grepl(c('Retail'), unique(inputs[BankNameShort %in% input$bankFilterSettingECL & Country %in% c(input$countryFilterSettingECL1, input$countryFilterSettingECL2, input$countryFilterSettingECL3, input$countryFilterSettingECL4), ExposureReduced]))], 'Corporates'), checkIcon = checkIconList)
+# })
+# observeEvent(input$deselectAllCorporatesECL, {
+#   shinyWidgets::updateCheckboxGroupButtons(session, "sectorFilterSettingECL1", "Corporates", choices=setdiff(unique(inputs[BankNameShort %in% input$bankFilterSettingECL & Country %in% c(input$countryFilterSettingECL1, input$countryFilterSettingECL2, input$countryFilterSettingECL3, input$countryFilterSettingECL4), ExposureReduced])[!grepl(c('Retail'), unique(inputs[BankNameShort %in% input$bankFilterSettingECL & Country %in% c(input$countryFilterSettingECL1, input$countryFilterSettingECL2, input$countryFilterSettingECL3, input$countryFilterSettingECL4), ExposureReduced]))], 'Corporates'), selected=NULL, checkIcon = checkIconList)
+# })
+# # retail
+# observeEvent(input$selectAllRetailECL, {
+#   shinyWidgets::updateCheckboxGroupButtons(session, "sectorFilterSettingECL2", "Corporates", choices=setdiff(unique(inputs[BankNameShort %in% input$bankFilterSettingECL & Country %in% c(input$countryFilterSettingECL1, input$countryFilterSettingECL2, input$countryFilterSettingECL3, input$countryFilterSettingECL4), ExposureReduced])[grepl('Retail', unique(inputs[BankNameShort %in% input$bankFilterSettingECL & Country %in% c(input$countryFilterSettingECL1, input$countryFilterSettingECL2, input$countryFilterSettingECL3, input$countryFilterSettingECL4), ExposureReduced]))], 'Retail'), selected=setdiff(unique(inputs[BankNameShort %in% input$bankFilterSettingECL & Country %in% c(input$countryFilterSettingECL1, input$countryFilterSettingECL2, input$countryFilterSettingECL3, input$countryFilterSettingECL4), ExposureReduced])[grepl('Retail', unique(inputs[BankNameShort %in% input$bankFilterSettingECL & Country %in% c(input$countryFilterSettingECL1, input$countryFilterSettingECL2, input$countryFilterSettingECL3, input$countryFilterSettingECL4), ExposureReduced]))], 'Retail'), checkIcon = checkIconList)
+# })
+# observeEvent(input$deselectAllRetailECL, {
+#   shinyWidgets::updateCheckboxGroupButtons(session, "sectorFilterSettingECL2", "Retail", choices=setdiff(unique(inputs[BankNameShort %in% input$bankFilterSettingECL & Country %in% c(input$countryFilterSettingECL1, input$countryFilterSettingECL2, input$countryFilterSettingECL3, input$countryFilterSettingECL4), ExposureReduced])[grepl('Retail', unique(inputs[BankNameShort %in% input$bankFilterSettingECL & Country %in% c(input$countryFilterSettingECL1, input$countryFilterSettingECL2, input$countryFilterSettingECL3, input$countryFilterSettingECL4), ExposureReduced]))], 'Retail'), selected=NULL, checkIcon = checkIconList)
+# })
+
+#### Fourth we render everything in a navbar
+
+shinyUI(
+  fluidPage(
+    navbarPage("",
+               # tabPanel(
+               #   div(style="display: inline-block; align: center;",
+               #       shinyWidgets::dropdown(label='Bank', status = "primary",
+               #                              fluidRow(
+               #                                column(10,offset=0,
+               #                                       div(style = "padding: 0px 0px; margin-left:0.1%",
+               #                                           checkboxGroupButtons(inputId = "bankFilterSettingECL", 
+               #                                                                label = "Bank Setting", choices = unique(inputs$BankNameShort), 
+               #                                                                individual = TRUE, 
+               #                                                                checkIcon = checkIconList),
+               #                                           br(),
+               #                                           actionButton("selectAllBankECL", "Select All"),
+               #                                           actionButton("deselectAllBankECL", "Deselect All")
+               #                                       ))))
+               #       ,
+               #       circle = F, status = "primary",
+               #       icon = icon("time"), width = "300px",
+               #       tooltip = tooltipOptions(title = "Click to modify inputs")
+               #   ))  ,
+               # 
+               # tabPanel(div(style="display: inline-block;",
+               #              shinyWidgets::dropdown(label = 'Country',
+               #                                     fluidRow(column(3,offset=0, 
+               #                                                     div(style="display: inline-block; align: center;",
+               #                                                         uiOutput('countryFilterSettingECL1UI'),
+               #                                                         br(),
+               #                                                         actionButton("selectAllEuropeECL", "Select All"),
+               #                                                         actionButton("deselectAllEuropeECL", "Deselect All"),
+               #                                                         circle = F, status = "primary",
+               #                                                         icon = icon("time"), width = "300px",
+               #                                                         tooltip = tooltipOptions(title = "Click to modify inputs"))),
+               #                                              column(3,offset=0, 
+               #                                                     div(style = "padding: 0px 0px; margin-left:0.1%",
+               #                                                         uiOutput('countryFilterSettingECL2UI'),
+               #                                                         br(),
+               #                                                         actionButton("selectAllAsiaECL", "Select All"),
+               #                                                         actionButton("deselectAllAsiaECL", "Deselect All"))),
+               #                                              column(3,offset=0,
+               #                                                     div(style = "padding: 0px 0px; margin-left:0.1%",
+               #                                                         uiOutput('countryFilterSettingECL3UI'),
+               #                                                         br(),
+               #                                                         actionButton("selectAllAmericasECL", "Select All"),
+               #                                                         actionButton("deselectAllAmericasECL", "Deselect All"))),
+               #                                              column(3,offset=0,
+               #                                                     div(style = "padding: 0px 0px; margin-left:0.1%",
+               #                                                         uiOutput('countryFilterSettingECL4UI'),
+               #                                                         br(),
+               #                                                         actionButton("selectAllOtherECL", "Select All"),
+               #                                                         actionButton("deselectAllOtherECL", "Deselect All")))),
+               #                                     circle = F, status = "primary", width = "1000px",
+               #                                     tooltip = tooltipOptions(title = "Click to modify inputs")))),
+               # tabPanel(div(style="display: inline-block;",
+               #              shinyWidgets::dropdown(label = 'Exposure',
+               #                                     fluidRow(column(4,offset=0,
+               #                                                     div(style="display: inline-block; align: center;",
+               #                                                         uiOutput('sectorFilterSettingECL1UI'),
+               #                                                         br(),
+               #                                                         actionButton("selectAllCorporatesECL", "Select All"),
+               #                                                         actionButton("deselectAllCorporatesECL", "Deselect All"))),
+               #                                              column(4,offset=0,
+               #                                                     div(style = "padding: 0px 0px; margin-left:0.1%",
+               #                                                         uiOutput('sectorFilterSettingECL2UI'),
+               #                                                         br(),
+               #                                                         actionButton("selectAllRetailECL", "Select All"),
+               #                                                         actionButton("deselectAllRetailECL", "Deselect All")))),
+               #                                     circle = F, status = "primary", width = "1000px",
+               #                                     tooltip = tooltipOptions(title = "Click to modify inputs")
+               # ))),
+               # 
+               # tabPanel(
+               #   div(style="display: inline-block; align: center;",
+               #       shinyWidgets::dropdown(label='Portfolio',
+               #                              fluidRow(column(10,offset=0,
+               #                                              div(style = "",
+               #                                                  tags$h4(""),
+               #                                                  br(),
+               #                                                  selectInput(inputId = 'approach_ecl',
+               #                                                              label = 'Approach',
+               #                                                              choices=c("All","IRB","SA"),
+               #                                                              selected = "IRB")))),
+               #                              circle = F, status = "primary",
+               #                              icon = icon("formula"), width = "300px",
+               #                              tooltip = tooltipOptions(title = "Click to modify inputs")
+               #   ))),
+               tabPanel(
+                 div(style="display: inline-block; align: center;",
+                     shinyWidgets::dropdown(label='Production', 
+                                            fluidRow( column(10,offset=0, 
+                                                             div(style = "",
+                                                                 tags$h4(""),
+                                                                 br(),
+                                                                 radioGroupButtons(inputId = 'production_line_ecl', individual = T,
+                                  choices=c("All","Existing Portfolio", "All New Portfolios"), selected = "All",
+                                  checkIcon = list(yes = tags$i(class = "fa fa-circle", 
+                                  style = "color: steelblue"), 
+                                  no = tags$i(class = "fa fa-circle-o", 
+                                  style = "color: steelblue")))
+                                                                 ))), 
+                                            circle = F, status = "primary", icon = icon("formula"),
+                                            width = "200px",tooltip = tooltipOptions(title = "Click to modify inputs")))),
+               tabPanel(
+                 div(style="display: inline-block; align: center;",
+                     shinyWidgets::dropdown(label = 'Scenario',
+                                            fluidRow(column(10,offset=0,
+                                                            div(style = "padding: 0px 0px; margin-left:0.1%",
+                                                                tags$h4(""),
+                                                                br(),
+                                                                uiOutput(outputId = "scenariosSelectionECL"),
+                                                                bsTooltip(id = "Scenario", title = "Scenario",
+                                                                          placement = "top", trigger = "hover")))),
+                                            circle = F, status = "primary",
+                                            icon = icon("time"), width = "200px",
+                                            tooltip = tooltipOptions(title = "Click to modify inputs")
+                 )))
+               
+    ), 
+    HTML("<script>var parent = document.getElementsByClassName('navbar-nav');
+         parent[0].insertAdjacentHTML( 'afterend', '<ul class=\"nav navbar-nav navbar-right\"><li class=\"disabled\"><a href=\"#\">v0.1</a></li></ul>' );</script>")
+    ))
+
+output$scenariosSelectionECL <- renderUI({
+  tagList(
+    #selectInput(inputId = 'ScenarioECL', label = 'Scenario', choices = unique(resultsFiltered()$Scenario), selected = grep("Baseline|baseline", unique(resultsFiltered()$Scenario), value = T))
+    radioGroupButtons(inputId = 'ScenarioECL', individual = T, choices=unique(resultsFiltered()$Scenario), 
+                                                                         selected = grep("Baseline|baseline", unique(resultsFiltered()$Scenario), value = T), 
+                                                                                                     checkIcon = list(yes = tags$i(class = "fa fa-circle", 
+                                                                         style = "color: steelblue"), 
+                                                                         no = tags$i(class = "fa fa-circle", 
+                                                                         style = "color: white")))
+    )
+  })
+outputOptions(x = output, name = "scenariosSelectionECL", suspendWhenHidden = FALSE)
+
+
+
+```
+
+<!--- Filter data with page menu's --->
+```{r}
+dataFil_ecl <- reactive({
+  
+  results <- resultsFiltered()
+
+  # filtering based on user selection
+  productionSelection <- sort(unique(results$PoolCutoffDate))
+  if(input$production_line_ecl == "Existing Portfolio"){
+    productionSelection <- productionSelection[1]
+  }else if(input$production_line_ecl == "All New Portfolios"){
+    productionSelection <- productionSelection[-1]
+  }
+
+
+  # combine all country filter settings
+  # countryFilterSettingECL <- as.vector(c(input$countryFilterSettingECL1, input$countryFilterSettingECL2, input$countryFilterSettingECL3, input$countryFilterSettingECL4))
+  # # combine all sector filter settings
+  # ExposureTypeFilterSettingECL <- as.vector(c(input$sectorFilterSettingECL1, input$sectorFilterSettingECL2))
+  # # select IRB,SA or all
+  # approachECL <- input$approach_ecl
+  # if(approachECL == "All") approachECL <- c("SA", "IRB")
+  
+  resultsFil <- results[PoolCutoffDate %in% productionSelection]
+
+  # resultsFil <- results[BankNameShort %in% input$bankFilterSettingECL & Country %in% countryFilterSettingECL & ExposureReduced %in% ExposureTypeFilterSettingECL & PortfolioLabel %in% approachECL & PoolCutoffDate %in% productionSelection]
+  
+  return(list( resultsFil = resultsFil))
+})
+
+```
+
+
+Row
+-------------------------------------
+  
+
+### <span style="color:`r borderTextColor`">Default rate by Vintage (%)</span>
+
+```{r}
+modelGraphsECL <- reactive({
+  
+  selectedScenario  <- input$ScenarioECL
+
+  resultsFil_ch <- dataFil_ecl()$resultsFil
+  # replace  0 by NA if the Poolcutoff = DateYQ since new production will not have defaults
+  resultsFil_ch[DateYQ == PoolCutoffDate , MarginalDefault := NA]
+  # vintage name used for labeling
+  resultsFil_ch[, PoolCutoffDate := as.character(PoolCutoffDate)]
+  resultsFil_tmp <- copy(resultsFil_ch)
+  resultsFil_tmp[, PoolCutoffDate := "All selected production"]
+  resultsFil_tmp <- rbind(resultsFil_ch, resultsFil_tmp)
+  
+  colUsed <- vintageColor[1:(length(unique(resultsFil_tmp$PoolCutoffDate)))]
+  
+  poolSummary <- resultsFil_ch[, .(loss = sum(ECL_Default * MarginalDefault), 
+                                ead = sum(EAD)),
+                            by=c("DateYQ", "Scenario", "PoolCutoffDate")]
+  
+  CCAR <- FALSE
+  if(length(grep('Severe|severe',poolSummary$Scenario))>0) {
+    CCAR <- TRUE
+  }
+  poolSummary <- poolSummary[Scenario == selectedScenario]
+  poolSummary <- relabelScenario(poolSummary, "Scenario", CCAR)
+   
+  poolSummaryLong <- melt(poolSummary, id.vars = c('DateYQ','Scenario', 'PoolCutoffDate'))
+  setorder(poolSummaryLong, DateYQ, Scenario, PoolCutoffDate)
+  poolSummaryLong$variable  <- as.character(poolSummaryLong$variable)
+  
+  relevantVar <- unique(grep(paste0("loss"), poolSummaryLong$variable, value = T))
+  
+  loss_vint_list <- lapply(sort(unique(poolSummaryLong$PoolCutoffDate), decreasing = T), 
+                            function(x) list(data = 
+                                               merge(poolSummaryLong[variable %in%relevantVar
+                      & PoolCutoffDate == x,
+                      .(DateYQ , value) ] , 
+                      data.table(DateYQ = unique(poolSummaryLong[, DateYQ ])), all.y = T,
+                      by = "DateYQ")[, round(value,4)]
+                      , name = x ))
+  
+  graph_loss_vint <-  highchart() %>%  hc_chart(type = "area") %>% 
+   # hc_title(text = "Loss by Vintage") %>%  hc_subtitle(text = "") %>%
+    hc_xAxis(categories = sort(unique(poolSummaryLong[variable %in% relevantVar, DateYQ])),
+           tickmarkPlacement = "on",
+           title = list(enabled = FALSE)) %>% 
+                    hc_yAxis(labels=list(format = '{value} MM'))  %>% 
+  hc_plotOptions(area = list(
+    stacking = "value",
+    lineColor = "#ffffff",
+    lineWidth = 1,
+    marker = list(
+      lineWidth = 1,
+      lineColor = "#ffffff"
+    ))
+  ) %>% 
+    hc_add_series_list(loss_vint_list) %>%  hc_add_theme(thm) %>%  
+    hc_colors(rev(colUsed)[-1])
+  
+   relevantVar <- unique(grep(paste0("ead"), poolSummaryLong$variable, value = T))
+  
+   ead_vint_list <- lapply(sort(unique(poolSummaryLong$PoolCutoffDate), decreasing = T), 
+                            function(x) list(data = 
+                                               merge(poolSummaryLong[variable %in%relevantVar
+                      & PoolCutoffDate == x,
+                      .(DateYQ , value) ] , 
+                      data.table(DateYQ = unique(poolSummaryLong[, DateYQ ])), all.y = T,
+                      by = "DateYQ")[, value]
+                      , name = x ))
+  
+  graph_ead_vint <-  highchart() %>%  hc_chart(type = "area") %>% 
+    hc_title(text = "EAD by vintage") %>%  hc_subtitle(text = "") %>%
+    hc_xAxis(categories = sort(unique(poolSummaryLong[variable %in% relevantVar, DateYQ])),
+           tickmarkPlacement = "on",
+           title = list(enabled = FALSE)) %>% 
+  hc_yAxis(title = list(text = "EAD")) %>% 
+  hc_plotOptions(area = list(
+    stacking = "value",
+    lineColor = "#ffffff",
+    lineWidth = 1,
+    marker = list(
+      lineWidth = 1,
+      lineColor = "#ffffff"
+    ))
+  ) %>% 
+    hc_add_series_list(ead_vint_list) %>%
+    hc_add_theme(thm) %>%  hc_colors(rev(colUsed)[-1])
+  
+  poolSummary <- resultsFil_tmp[, .(default_rate = 
+                                      weighted.mean(MarginalDefault, EAD, na.rm = T)*4*100),
+                            by=c("DateYQ", "Scenario", "PoolCutoffDate")]
+  
+  poolSummary <- poolSummary[Scenario == selectedScenario]
+  poolSummary <- relabelScenario(poolSummary, "Scenario", CCAR)
+   
+  poolSummaryLong <- melt(poolSummary, id.vars = c('DateYQ','Scenario', 'PoolCutoffDate'))
+  setorder(poolSummaryLong, DateYQ, Scenario, PoolCutoffDate)
+  poolSummaryLong$variable  <- as.character(poolSummaryLong$variable)
+
+  relevantVar <- unique(grep(paste0("def"), poolSummaryLong$variable, value = T))
+  
+  graph_def_vint <- hchart(poolSummaryLong[variable %in% relevantVar,], "line",
+                       hcaes(x = DateYQ, y = value,
+                             group = paste(variable, PoolCutoffDate))) %>% 
+    hc_plotOptions(line = list(
+      lineWidth =  5)) %>%
+    hc_add_theme(thm) %>%  hc_colors(colUsed)
+  
+  
+  
+  #fourth$x$hc_opts$series[[3]]$visible <- F
+  #  fourth$x$hc_opts$series[[4]]$visible <- F
+
+  return(list(graph_def_vint= graph_def_vint, graph_loss_vint = graph_loss_vint, graph_ead_vint = graph_ead_vint))
+
+})
+
+```
+
+```{r}
+renderHighchart({
+  modelGraphsECL()$graph_def_vint
+})
+```
+
+### <span style="color:`r borderTextColor`">Loss on Defaulted Exposure by Vintage</span> {.bgred}
+
+```{r}
+renderHighchart({
+  modelGraphsECL()$graph_loss_vint
+})
+```
+
+
+Row
+-------------------------------------
+  
+### <span style="color:`r borderTextColor`">ECL</span> {.bgred} 
+  
+
+```{r}
+# shows basel, ifrs 9 after weighting scenarios, ifrs 9 life time, cecl, stage 2, stage 3 ECLs
+
+ECLFigure_ecl <- reactive({
+
+results <- dataFil_ecl()$resultsFil
+results <- left_join(results, mappingTableProbScen[, c('Scenario', 'ScenarioProbabilityPerc'), with = FALSE])
+results <- as.data.table(results)
+
+# ECL_Life weighted by scenario probability   
+
+lifeList <- c(paste0("Rating",3:8),paste0("ECL_Life_Rating",3:8))
+lifeExclude <- lifeList[!lifeList %in% names(results)]
+if(length(lifeExclude)!=0){
+results[,(lifeExclude):=0]
+}
+results[, ECL_Life := Rating3 * ECL_Life_Rating3 + Rating4 * ECL_Life_Rating4 + Rating5 * ECL_Life_Rating5 + 
+          Rating6 * ECL_Life_Rating6 + Rating7 * ECL_Life_Rating7 + Rating8 * ECL_Life_Rating8]
+results[, ECL_Life_Times_Scenario_Prob := ECL_Life * ScenarioProbabilityPerc / 100] 
+if(length(lifeExclude)!=0){
+results[,(lifeExclude):=NULL]
+}
+
+# Stage 1, 2, 3
+AssetClass <- max(results$BorrowerBaselIIISegment, na.rm = T)
+
+Y1_List <- c(paste0("Rating",3:8),paste0("ECL_1Y_Rating",3:8))
+Y1_Exclude <- lifeList[!lifeList %in% names(results)]
+if(length(Y1_Exclude)!=0){
+results[,(Y1_Exclude):=0]
+}
+results[, Stage1ECLTimesScenarioProb := Stage1ECL ] 
+results[, Stage2ECLTimesScenarioProb := Stage2ECL ]
+results[, Stage3ECLTimesScenarioProb := Stage3ECL ] 
+if(length(Y1_Exclude)!=0){
+results[,(Y1_Exclude):=NULL]
+}
+
+  # by period plot
+  millionDivisor <- 1
+  #millionDivisor <- 1000000
+  ECL <- results[, list(`Stage 1 ECL` = round(sum(Stage1ECLTimesScenarioProb/millionDivisor, na.rm = TRUE), 2),
+                       `Stage 2 ECL` = round(sum(Stage2ECLTimesScenarioProb/millionDivisor, na.rm = TRUE), 2),
+                       `Stage 3 ECL` = round(sum(Stage3ECLTimesScenarioProb/millionDivisor, na.rm = TRUE), 2),
+                       `Basel ECL` = round(sum(ECL_1Y/millionDivisor, na.rm = TRUE), 2)), 
+                 by = c('DateYQ', 'Scenario')]
+
+  ECL <- ECL[Scenario == input$ScenarioECL, ]
+  
+  ECL_ifrs9 <- results[, list(`IFRS 9 Lifetime ECL` 
+                              = round(sum(ECL_Life_Times_Scenario_Prob/millionDivisor,
+                                          na.rm = TRUE), 2)), 
+                       by = c('DateYQ')]
+  
+  ECL <- merge(ECL[, -'Scenario'], ECL_ifrs9 , by = 'DateYQ')
+  # gather to get the data into highchart format (it condenses the information in ECL's column 2, 3, and 4)
+  ECLData <- gather(ECL, "variable", "value", c(2, 3, 4, 5, 6))
+  ECLData <- ECLData[order(ECLData$DateYQ), ]
+  ECLData <- as.data.table(ECLData)
+  # for now set to below min(DateYQ) + 10, could perhaps be made interactive
+  ECLData <- ECLData[DateYQ < min(DateYQ) + 10, ]
+ 
+  
+  graph_ECL <- hchart(ECLData, "column", hcaes(x = DateYQ, y = value, group = variable), borderWidth = 0) %>%
+                  hc_colors(c(lineColors[c(7, 4, 1)], 'green', 'red')) %>% # select 9, 7, 5, 3 for high contrast
+                  hc_add_theme(thm) %>% hc_yAxis(labels=list(format = '{value} MM'))
+                  # hc_xAxis(title=list(text='MM')) %>%
+                  # hc_yAxis(title=list(text='Date'))
+  
+  return(list(graph_ECL = graph_ECL))
+
+})
+
+```
+
+```{r}
+ 
+
+
+renderHighchart({ 
+   if(nrow(resultsFiltered())==0 ) return(whitechart) 
+   ECLFigure_ecl()$graph_ECL
+}) 
+```
+
+<!-- ### <span style="color:`r borderTextColor`">EAD by Vintage TESTING</span> {.bgred}  -->
+
+<!-- ```{r} -->
+<!-- renderHighchart({ -->
+<!--   modelGraphsECL()$graph_ead_vint -->
+<!-- }) -->
+<!-- ``` -->
+
+<!-- ### <span style="color:`r borderTextColor`">TBD</span> <span style="color:`r borderTextColor`"></span> {.bgred} -->
+
+
+<!-- ```{r} -->
+<!-- #  -->
+<!-- # renderHighchart({ -->
+<!-- #   modelGraphs()$graph_LGD -->
+<!-- # }) -->
+
+
+<!-- ``` -->

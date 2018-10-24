@@ -1,0 +1,14 @@
+name: metisdemo4
+title: MetisDemo
+username: michael.hogers
+account: michael.hogers
+server: applications.os-is.com
+hostUrl: https://applications.os-is.com/__api__
+appId: 139
+bundleId: 868
+url: https://applications.os-is.com/content/139/
+when: 1536244777.76757
+asMultiple: FALSE
+asStatic: FALSE
+additionalFiles: RCode/MDmodels.R|RCode/CREmodels.R|RCode/CPM_Calculations_Functions.R|RCode/functionsForForecastsOfMacrosAndPDs.R|RCode/fitMacros2TimeSeries.R|RCode/ColorPaletteGeneration.R|RCode/RWA_functions.R
+ignoredFiles: RCode

@@ -1,0 +1,8 @@
+﻿Scenario,ScenarioBucketPerc,ScenarioProbabilityPerc,CumProbababilityPerc, 
+CCAR2018_baseline,"(20, 80]",60,50, 
+CCAR2018_adverse,"(80, 90]",10,85,
+CCAR2018_severe,"(90, 99.9]",9.9,95,
+EBA2018_baseline,"(20, 80]",60,50,
+EBA2018_adverse,"(80, 99.9]",19.9,90,
+OSIS2018_optimal,"(0, 20]",20,10,
+OSIS2018_extreme,"(99.9, 1]",0.1,99.9,

@@ -1,0 +1,17 @@
+User Session {data-icon="fa-search"}
+=====================================
+
+Row
+-------------------------------------
+
+### <span style="color:`r borderTextColor`">Previously Saved Data</span> {.bgred}
+
+### <span style="color:`r borderTextColor`">Save Current Data</span> {.bgred}
+
+
+Row {.tabset}
+-------------------------------------
+
+### <span style="color:`r borderTextColor`">First Snapshot</span> {.bgred}
+
+### <span style="color:`r borderTextColor`">Results</span> {.bgred}

@@ -1,0 +1,717 @@
+Current Portfolio Overview {data-icon="fa-search"}
+=====================================
+
+```{r}
+
+###################################################################
+#### This chunk contains the inputs on the Bank Data Overview page
+#### First we create conditional inputs with renderUI
+#### Second we create the logic for the select all/unselect all buttons
+#### Third, we create logic for the measure selection, which has to be dependent on each other
+####    it consists of multiple menus but they should only allow one item to be selected across all menus
+#### Fourth we render everything in a navbar
+####################################################################
+
+#### First we create conditional inputs with renderUI
+output$countryFilterSettingBDO1UI <- renderUI({
+  countrySideSelBDO1 <- input$countryDataSelectedSidebar
+  country_listBDO1 <- countriesShortCodeContinent[Continent == 'Europe', Country
+                          ][which(countriesShortCodeContinent[Continent == 'Europe', Country] %in% countrySideSelBDO1)]
+ 
+  
+  checkboxGroupButtons(inputId = "countryFilterSettingBDO1", 
+  label = "Europe", 
+  choices = country_listBDO1, selected = country_listBDO1, individual = TRUE, 
+  checkIcon = checkIconList)
+  
+})
+
+outputOptions(output, "countryFilterSettingBDO1UI", suspendWhenHidden = FALSE)
+
+
+output$countryFilterSettingBDO2UI <- renderUI({
+  countrySideSelBDO2 <- input$countryDataSelectedSidebar
+  country_listBDO2 <- countriesShortCodeContinent[Continent == 'Asia', Country
+                          ][which(countriesShortCodeContinent[Continent == 'Asia', Country] %in% countrySideSelBDO2)]
+ 
+  
+  checkboxGroupButtons(inputId = "countryFilterSettingBDO2", 
+  label = "Asia", 
+  choices = country_listBDO2, selected = country_listBDO2, individual = TRUE, 
+  checkIcon = checkIconList)
+  
+})
+
+outputOptions(output, "countryFilterSettingBDO2UI", suspendWhenHidden = FALSE)
+
+
+output$countryFilterSettingBDO3UI <- renderUI({
+  
+    countrySideSelBDO3 <- input$countryDataSelectedSidebar
+  country_listBDO3 <- countriesShortCodeContinent[Continent == 'Americas', Country
+                          ][which(countriesShortCodeContinent[Continent == 'Americas', Country] %in% countrySideSelBDO3)]
+ 
+  
+  checkboxGroupButtons(inputId = "countryFilterSettingBDO3", 
+  label = "Americas", 
+  choices = country_listBDO3, selected = country_listBDO3, individual = TRUE, 
+  checkIcon = checkIconList)
+  
+})
+
+outputOptions(output, "countryFilterSettingBDO3UI", suspendWhenHidden = FALSE)
+
+output$countryFilterSettingBDO4UI <- renderUI({
+  
+  countrySideSelBDO4 <- input$countryDataSelectedSidebar
+  country_listBDO4 <- countriesShortCodeContinent[!Continent %in% c('Americas', 'Asia', 'Europe'), Country][which(countriesShortCodeContinent[!Continent %in% c('Americas', 'Asia', 'Europe'), Country] %in% countrySideSelBDO4)]
+ 
+  # set 0 to All Countries for readability
+  if ('0' %in% country_listBDO4){
+    country_listBDO4 <- as.list(c("0", setdiff(country_listBDO4, '0')))
+    names(country_listBDO4) <- c('All Countries', setdiff(country_listBDO4, '0'))  
+  }
+  
+  checkboxGroupButtons(inputId = "countryFilterSettingBDO4", 
+  label = "Other", 
+  choices = country_listBDO4, selected = country_listBDO4, individual = TRUE, 
+  checkIcon = checkIconList)
+  
+})
+
+outputOptions(output, "countryFilterSettingBDO4UI", suspendWhenHidden = FALSE)
+
+
+output$sectorFilterSettingBDO1UI <- renderUI({
+  
+  sectorSideSelBDO1 <- input$exposureReducedDataSelectedSidebar
+  sector_listBDO1 <- grep("Corporates", sectorSideSelBDO1, value = T)
+  
+  checkboxGroupButtons(inputId = "sectorFilterSettingBDO1", 
+  label = "Corporates", 
+  choices = sector_listBDO1, selected = sector_listBDO1, individual = TRUE, 
+  checkIcon = checkIconList)
+
+})
+
+outputOptions(output, "sectorFilterSettingBDO1UI", suspendWhenHidden = FALSE)
+
+output$sectorFilterSettingBDO2UI <- renderUI({
+  
+  sectorSideSelBDO2 <- input$exposureReducedDataSelectedSidebar
+  sector_listBDO2 <- grep("Retail", sectorSideSelBDO2, value = T)
+  
+  checkboxGroupButtons(inputId = "sectorFilterSettingBDO2", 
+  label = "Retail", 
+  choices = sector_listBDO2, selected = sector_listBDO2, individual = TRUE, 
+  checkIcon = checkIconList)
+  
+})
+outputOptions(output, "sectorFilterSettingBDO2UI", suspendWhenHidden = FALSE)
+
+output$portfolioFilterSettingBDO1UI <- renderUI({
+  
+  portfolioSideSelBDO1 <- input$portfolioLabelDataSelectedSidebar
+    if(portfolioSideSelBDO1 == "All Portfolios") portfolioSideSelBDO1 <- unique(results()$PortfolioLabel)
+  
+  checkboxGroupButtons(inputId = "Formula_Selected", 
+  label = "", 
+  choices = portfolioSideSelBDO1, selected = portfolioSideSelBDO1, individual = TRUE, 
+  checkIcon = checkIconList)
+  
+})
+outputOptions(output, "portfolioFilterSettingBDO1UI", suspendWhenHidden = FALSE)
+
+
+#### Second we create the logic for the select all/unselect all buttons
+
+# for later reference in this second part, but also third part
+checkIconList <- list(yes = tags$i(class = "fa fa-circle", 
+                      style = "color: steelblue"), 
+                      no = tags$i(class = "fa fa-circle-o", 
+                      style = "color: steelblue"))
+
+# Country dropdown
+# Europe
+# observeEvent(input$selectAllEurope, {
+#       shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingBDO1", "Europe", choices=countriesShortCodeContinent[Continent == 'Europe', Country][which(countriesShortCodeContinent[Continent == 'Europe', Country] %in% inputs[BankNameShort %in% input$bankFilterSettingBDO, Country])], selected=countriesShortCodeContinent[Continent == 'Europe', Country][which(countriesShortCodeContinent[Continent == 'Europe', Country] %in% inputs[BankNameShort %in% input$bankFilterSettingBDO, Country])], checkIcon = checkIconList)
+# })
+# observeEvent(input$deselectAllEurope, {
+#       shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingBDO1", "Bank Setting", choices=countriesShortCodeContinent[Continent == 'Europe', Country][which(countriesShortCodeContinent[Continent == 'Europe', Country] %in% inputs[BankNameShort %in% input$bankFilterSettingBDO, Country])], selected=NULL, checkIcon = checkIconList)
+# })
+# # Asia
+# observeEvent(input$selectAllAsia, {
+#       shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingBDO2", "Asia", choices=countriesShortCodeContinent[Continent == 'Asia', Country][which(countriesShortCodeContinent[Continent == 'Asia', Country] %in% inputs[BankNameShort %in% input$bankFilterSettingBDO, Country])], selected=countriesShortCodeContinent[Continent == 'Asia', Country][which(countriesShortCodeContinent[Continent == 'Asia', Country] %in% inputs[BankNameShort %in% input$bankFilterSettingBDO, Country])], checkIcon = checkIconList)
+# })
+# observeEvent(input$deselectAllAsia, {
+#       shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingBDO2", "Asia", choices=countriesShortCodeContinent[Continent == 'Asia', Country][which(countriesShortCodeContinent[Continent == 'Asia', Country] %in% inputs[BankNameShort %in% input$bankFilterSettingBDO, Country])], selected=NULL, checkIcon = checkIconList)
+# })
+# # Americas
+# observeEvent(input$selectAllAmericas, {
+#       shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingBDO3BDO", "Americas", choices=countriesShortCodeContinent[Continent == 'Americas', Country][which(countriesShortCodeContinent[Continent == 'Americas', Country] %in% inputs[BankNameShort %in% input$bankFilterSettingBDO, Country])], selected=countriesShortCodeContinent[Continent == 'Americas', Country][which(countriesShortCodeContinent[Continent == 'Americas', Country] %in% inputs[BankNameShort %in% input$bankFilterSettingBDO, Country])], checkIcon = checkIconList)
+# })
+# observeEvent(input$deselectAllAmericas, {
+#       shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingBDO3BDO", "Americas", choices=countriesShortCodeContinent[Continent == 'Americas', Country][which(countriesShortCodeContinent[Continent == 'Americas', Country] %in% inputs[BankNameShort %in% input$bankFilterSettingBDO, Country])], selected=NULL, checkIcon = checkIconList)
+# })
+# # Other
+# observeEvent(input$selectAllOther, {
+#       shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingBDO4", "Other", choices=countriesShortCodeContinent[!Continent %in% c('Americas', 'Asia', 'Europe'), Country][which(countriesShortCodeContinent[!Continent %in% c('Americas', 'Asia', 'Europe'), Country] %in% inputs[BankNameShort %in% input$bankFilterSettingBDO, Country])], selected=countriesShortCodeContinent[!Continent %in% c('Americas', 'Asia', 'Europe'), Country][which(countriesShortCodeContinent[!Continent %in% c('Americas', 'Asia', 'Europe'), Country] %in% inputs[BankNameShort %in% input$bankFilterSettingBDO, Country])], checkIcon = checkIconList)
+# })
+# observeEvent(input$deselectAllOther, {
+#       shinyWidgets::updateCheckboxGroupButtons(session, "countryFilterSettingBDO4", "Other", choices=countriesShortCodeContinent[!Continent %in% c('Americas', 'Asia', 'Europe'), Country][which(countriesShortCodeContinent[!Continent %in% c('Americas', 'Asia', 'Europe'), Country] %in% inputs[BankNameShort %in% input$bankFilterSettingBDO, Country])], selected=NULL, checkIcon = checkIconList)
+# })
+# # Sector dropdown
+# # corporates
+# observeEvent(input$selectAllCorporates, {
+#       shinyWidgets::updateCheckboxGroupButtons(session, "sectorFilterSettingBDO1", "Corporates", choices=setdiff(unique(inputs[BankNameShort %in% input$bankFilterSettingBDO & Country %in% c(input$countryFilterSettingBDO1, input$countryFilterSettingBDO2, input$countryFilterSettingBDO3, input$countryFilterSettingBDO4), ExposureReduced])[!grepl(c('Retail'), unique(inputs[BankNameShort %in% input$bankFilterSettingBDO & Country %in% c(input$countryFilterSettingBDO1, input$countryFilterSettingBDO2, input$countryFilterSettingBDO3, input$countryFilterSettingBDO4), ExposureReduced]))], 'Corporates'), selected=setdiff(unique(inputs[BankNameShort %in% input$bankFilterSettingBDO & Country %in% c(input$countryFilterSettingBDO1, input$countryFilterSettingBDO2, input$countryFilterSettingBDO3, input$countryFilterSettingBDO4), ExposureReduced])[!grepl(c('Retail'), unique(inputs[BankNameShort %in% input$bankFilterSettingBDO & Country %in% c(input$countryFilterSettingBDO1, input$countryFilterSettingBDO2, input$countryFilterSettingBDO3, input$countryFilterSettingBDO4), ExposureReduced]))], 'Corporates'), checkIcon = checkIconList)
+# })
+# observeEvent(input$deselectAllCorporates, {
+#       shinyWidgets::updateCheckboxGroupButtons(session, "sectorFilterSettingBDO1", "Corporates", choices=setdiff(unique(inputs[BankNameShort %in% input$bankFilterSettingBDO & Country %in% c(input$countryFilterSettingBDO1, input$countryFilterSettingBDO2, input$countryFilterSettingBDO3, input$countryFilterSettingBDO4), ExposureReduced])[!grepl(c('Retail'), unique(inputs[BankNameShort %in% input$bankFilterSettingBDO & Country %in% c(input$countryFilterSettingBDO1, input$countryFilterSettingBDO2, input$countryFilterSettingBDO3, input$countryFilterSettingBDO4), ExposureReduced]))], 'Corporates'), selected=NULL, checkIcon = checkIconList)
+# })
+# # retail
+# observeEvent(input$selectAllRetail, {
+#       shinyWidgets::updateCheckboxGroupButtons(session, "sectorFilterSettingBDO2", "Corporates", choices=setdiff(unique(inputs[BankNameShort %in% input$bankFilterSettingBDO & Country %in% c(input$countryFilterSettingBDO1, input$countryFilterSettingBDO2, input$countryFilterSettingBDO3, input$countryFilterSettingBDO4), ExposureReduced])[grepl('Retail', unique(inputs[BankNameShort %in% input$bankFilterSettingBDO & Country %in% c(input$countryFilterSettingBDO1, input$countryFilterSettingBDO2, input$countryFilterSettingBDO3, input$countryFilterSettingBDO4), ExposureReduced]))], 'Retail'), selected=setdiff(unique(inputs[BankNameShort %in% input$bankFilterSettingBDO & Country %in% c(input$countryFilterSettingBDO1, input$countryFilterSettingBDO2, input$countryFilterSettingBDO3, input$countryFilterSettingBDO4), ExposureReduced])[grepl('Retail', unique(inputs[BankNameShort %in% input$bankFilterSettingBDO & Country %in% c(input$countryFilterSettingBDO1, input$countryFilterSettingBDO2, input$countryFilterSettingBDO3, input$countryFilterSettingBDO4), ExposureReduced]))], 'Retail'), checkIcon = checkIconList)
+# })
+# observeEvent(input$deselectAllRetail, {
+#       shinyWidgets::updateCheckboxGroupButtons(session, "sectorFilterSettingBDO2", "Retail", choices=setdiff(unique(inputs[BankNameShort %in% input$bankFilterSettingBDO & Country %in% c(input$countryFilterSettingBDO1, input$countryFilterSettingBDO2, input$countryFilterSettingBDO3, input$countryFilterSettingBDO4), ExposureReduced])[grepl('Retail', unique(inputs[BankNameShort %in% input$bankFilterSettingBDO & Country %in% c(input$countryFilterSettingBDO1, input$countryFilterSettingBDO2, input$countryFilterSettingBDO3, input$countryFilterSettingBDO4), ExposureReduced]))], 'Retail'), selected=NULL, checkIcon = checkIconList)
+# })
+
+#### Third we create logic for the measure selection menu
+output$measuresUIBDO <- renderUI({
+  radioGroupButtons(inputId = "measureSelected", 
+  label = "", choices = measuresToChange[which(!grepl('New', measuresToChange))], selected = 'downturnlgd', checkIcon = checkIconList)
+})
+
+outputOptions(output, "measuresUIBDO", suspendWhenHidden = FALSE)
+
+
+observeEvent(
+  input$measureSelectedNewRating,
+  shinyWidgets::updateCheckboxGroupButtons(session, inputId = 'measureSelectedNewProdDefParam', choices = measuresToChange[which( c('New_ExposureGrowthRate', 'New_Maturity_numeric', 'New_WAL', 'New_rate', 'New_fee', 'New_CCF', 'New_DrawnPerc', 'New_lgd', 'New_downturnlgd', 'New_CPR') %in% measuresToChange)], selected = NULL, checkIcon = checkIconList)
+
+)
+
+# observe(
+# 
+#   input$measureSelectedNewProdDefParam,
+# 
+#   shinyWidgets::updateCheckboxGroupButtons(session, inputId = 'measureSelectedNewRating', choices = measuresToChange[which(grepl('New_Rating', measuresToChange))], selected = NULL, checkIcon = checkIconList)
+# 
+# )
+ 
+#### Fourth we render everything in a navbar
+
+shinyUI(
+  fluidPage(
+    navbarPage("",
+
+  tabPanel(div(style="display: inline-block;",shinyWidgets::dropdown(label = 'Country',
+    fluidRow(
+        column(3,offset=0,
+       div(style="display: inline-block; align: center;",
+           uiOutput('countryFilterSettingBDO1UI'),
+           # br(),
+           # actionButton("selectAllEurope", "Select All"),
+           # actionButton("deselectAllEurope", "Deselect All")
+           #,
+    circle = F, status = "primary",
+    icon = icon("time"), width = "300px",
+    tooltip = tooltipOptions(title = "Click to modify inputs")
+)
+               
+               ),
+    
+      column(3,offset=0,
+       div(style = "padding: 0px 0px; margin-left:0.1%",
+        uiOutput('countryFilterSettingBDO2UI')
+        #,
+           # br(),
+           # actionButton("selectAllAsia", "Select All"),
+           # actionButton("deselectAllAsia", "Deselect All")
+       )),
+
+
+column(3,offset=0,
+       div(style = "padding: 0px 0px; margin-left:0.1%",
+           uiOutput('countryFilterSettingBDO3UI')
+           #,
+           # br(),
+           # actionButton("selectAllAmericas", "Select All"),
+           # actionButton("deselectAllAmericas", "Deselect All")
+       )),
+
+column(3,offset=0,
+       div(style = "padding: 0px 0px; margin-left:0.1%",
+           uiOutput('countryFilterSettingBDO4UI')
+           #,
+           # br(),
+           # actionButton("selectAllOther", "Select All"),
+           # actionButton("deselectAllOther", "Deselect All")
+       ))
+
+  )
+  ,
+    circle = F, status = "primary", width = "1000px",
+    tooltip = tooltipOptions(title = "Click to modify inputs")
+  ))),
+
+  tabPanel(div(style="display: inline-block;",shinyWidgets::dropdown(label = 'Exposure',
+    fluidRow(
+        column(4,offset=0,
+       div(style="display: inline-block; align: center;",
+                     uiOutput('sectorFilterSettingBDO1UI')
+           #,
+           # br(),
+           # actionButton("selectAllCorporates", "Select All"),
+           # actionButton("deselectAllCorporates", "Deselect All")
+       ))
+       ,
+    
+      column(4,offset=0,
+       div(style = "padding: 0px 0px; margin-left:0.1%",
+          uiOutput('sectorFilterSettingBDO2UI')
+          #,
+           # br(),
+           # actionButton("selectAllRetail", "Select All"),
+           # actionButton("deselectAllRetail", "Deselect All")
+       ))
+  )
+  ,
+    circle = F, status = "primary", width = "1000px",
+    tooltip = tooltipOptions(title = "Click to modify inputs")
+  ))),
+
+  tabPanel(
+                 div(style="display: inline-block; align: center;",shinyWidgets::dropdown(label='Portfolio',
+    fluidRow(
+        column(10,offset=0,
+       div(style = "padding: 0px 0px; margin-left:0.1%",
+          uiOutput('portfolioFilterSettingBDO1UI')
+       ))
+  ),
+    circle = F, status = "primary",
+    icon = icon("formula"), width = "300px",
+    tooltip = tooltipOptions(title = "Click to modify inputs")
+  ))),
+
+  tabPanel(
+div(style="display: inline-block; align: center;",
+                     shinyWidgets::dropdown(label='Measure',
+    fluidRow(
+       column(6,offset=0,
+          div(style = "padding: 0px 0px; margin-left:0.1%; width: 100px;",
+              uiOutput('measuresUIBDO')
+              )
+            ),
+       column(6, offset=0
+                            )
+    ),
+    circle = F, status = "primary",
+    icon = icon("time"), width = "300px",
+    tooltip = tooltipOptions(title = "Click to modify inputs")
+)
+    
+  ))
+  ,
+  
+  tabPanel(
+                 div(style="display: inline-block; align: center; margin-bottom: 0px; margin-top: 0px; margin-right: 0px; margin-left: 0px; margin-top: -5px!important;",
+                     
+                      textInput(inputId = 'measureValueInput', label = '', placeholder = 'Enter Value', width = '100px')
+              )
+           ),
+
+  tabPanel(div(style="display: inline-block;", actionButton('renewValue', label = 'Set Values', style="color: #fff; background-color: green; border-color: green;"))),
+
+  tabPanel(div(style="display: inline-block;", actionButton('setRatings', label = 'Set Rating', style="color: #fff; background-color: green; border-color: green;")))
+
+
+# ,
+
+  # tabPanel(div(style="display: inline-block;", actionButton('revertChangesPopUp', label = 'Reset', style="color: black; background-color: white; border-color: green;")))
+)
+, 
+HTML("<script>var parent = document.getElementsByClassName('navbar-nav');
+parent[0].insertAdjacentHTML( 'afterend', '<ul class=\"nav navbar-nav navbar-right\"><li class=\"disabled\"><a href=\"#\">v0.1</a></li></ul>' );</script>")
+    ))
+
+
+
+# in case user wants to reset all values
+# Return the UI for a modal dialog with data selection input. If 'failed' is
+    # TRUE, then display a message that the previous value was invalid.
+    dataModal <- function(failed = FALSE) {
+      modalDialog(
+        title = "Continue with reverting changes to the data?",
+        # actionButton('revertChanges', 'Revert All Changes', style="color: black; background-color: white; border-color: red; justify-content: center; display: flex; align-items: center;"),
+        size = "s",
+        easyClose = TRUE
+      )
+    }
+    
+        # Show modal when button is clicked.
+    observeEvent(input$revertChangesPopUp, {
+      showModal(dataModal())
+    })
+    
+    
+# Rating Input Overview 
+# Set Rating Values
+    
+# initialise warning if rating inputs are off
+output$ratingFlagBDO <- renderText({''})
+    
+ratingModal <- function(failed = FALSE) {
+    modalDialog(
+            br(),
+            fluidRow(width = 12,
+                 DT::dataTableOutput('ratingModalTable')
+            ),
+            br(),
+            fluidRow(width = 12,
+                     column(width = 4,
+                            textInput('rating3PopupInput', label = '', placeholder = 'AAA/AA/A')
+                            ),
+                     column(width = 4,
+                            textInput('rating4PopupInput', label = '', placeholder = 'BBB')
+                            ),
+                     column(width = 4,
+                            textInput('rating5PopupInput', label = '', placeholder = 'BB')
+                            )
+               ),
+            fluidRow(width = 12,
+               column(width = 4,
+                      textInput('rating6PopupInput', label = '', placeholder = 'B')
+                      ),
+               column(width = 4,
+                      textInput('rating7PopupInput', label = '', placeholder = 'CCC')
+                      ),
+               column(width = 4,
+                            textInput('rating8PopupInput', label = '', placeholder = 'CC/C')
+                            )
+               ),
+            br(),
+            fluidRow(width = 12, 
+               column(width = 12,
+                      textOutput('ratingFlagBDO'),
+                      actionButton('applyRatingsToAllSelectedReplines', label = 'Set Ratings for Selected Replines', style="color: #fff; background-color: green; border-color: green;")
+                      )
+               ),
+    title = 'Set Ratings for Current Production',
+    size = "s",
+    easyClose = TRUE
+  )
+}
+
+# datatable output for rating modal
+output$ratingModalTable <- DT::renderDataTable({
+
+  input$applyRatingsToAllSelectedReplines
+  
+  selectedData <- manipulatedData()$filteredInputDataBDO
+  
+  if ('BankNameShort' %in% colnames(selectedData) & 'ExposureReduced' %in% colnames(selectedData)){
+    setnames(selectedData, c('BankNameShort', 'ExposureReduced'), c('Bank', 'Exposure')) 
+  }
+  
+  # first set everything equal to all portfolios, overwrite with either SA or IRB
+  selectedData <- as.data.table(selectedData)
+  # for readability by user
+  selectedData[Country == '0', Country := 'All Countries']
+  selectedData[, Portfolio := 'All Portfolios']
+  selectedData[grepl('SA', ReplineID), Portfolio := 'SA']
+  selectedData[grepl('IRB', ReplineID), Portfolio := 'IRB']
+  
+  selectedData <- selectedData[, c('Bank', 'Country', 'Exposure', 'Portfolio', paste0('Rating', 3:8)), with = FALSE]
+  #  rounding for new ratings
+  for (col in paste0('Rating', 3:8)){
+    selectedData[[col]] <- round(selectedData[[col]], 4)
+  }
+   setnames(selectedData, paste0('Rating',3:8), c('AAA/AA/A','BBB','BB','B','CCC','CC/C'))
+
+  colnames(selectedData) <- paste0('<span style="color:',"white",'">', c(colnames(selectedData)[1], colnames(selectedData)[2:length(colnames(selectedData))]),'</span>')
+  
+    
+
+  DT::datatable(selectedData,escape=F,options=list(lengthChange = FALSE, searching=FALSE, scrollY=T, scrollX=T, paging=F,bInfo=F)) %>%
+      formatStyle(columns = c(0:ncol(selectedData)), color = tableTextColor, backgroundColor = backgroundcolorTables)
+})
+
+
+# Show modal when button is clicked.
+observeEvent(input$setRatings, {
+  showModal(ratingModal())
+})
+
+
+    
+
+```
+
+```{r}
+# when user resets all filters, reload the data
+observeEvent(input$revertChanges, {
+
+  # combine all country filter settings
+  countryFilterSetting <- as.vector(c(input$countryFilterSettingBDO1, input$countryFilterSettingBDO2, input$countryFilterSettingBDO3, input$countryFilterSettingBDO4))
+  # combine all sector filter settings
+  sectorFilterSetting <- as.vector(c(input$sectorFilterSettingBDO1, input$sectorFilterSettingBDO2))
+  # no combination of bank filter settings, only one group of filters (see structure inside dropdown menu)
+
+  inputs <- get(load("RData/firstSnapshot.RData"))
+
+  manipulatedData()$filteredInputDataBDO <- inputs[Country %in% countryFilterSetting & 
+                                                ExposureReduced %in% sectorFilterSetting & 
+                                                (BankNameShort %in% sub("_EBAData2017Q2_Results.RData", "",input$bankDataSelectedSidebar) | BankNameShort %in% sub("_FDICData2018Q1_Results.RData", "",input$bankDataSelectedSidebar)) & 
+                                                grepl(input$Formula_Selected, ReplineID), ]
+  manipulatedData()$fullData <- inputs
+
+})
+
+
+```
+
+Row
+-------------------------------------
+
+### <span style="color:`r borderTextColor`">Input Data</span>
+
+
+```{r}
+DT::renderDataTable({
+
+  input$renewValue
+  
+  selectedData <- manipulatedData()$filteredInputDataBDO
+  selectedData[[input$measureSelected]] <- round(selectedData[[input$measureSelected]], 4)
+
+    if ('BankNameShort' %in% colnames(selectedData) & 'ExposureReduced' %in% colnames(selectedData)){
+    setnames(selectedData, c('BankNameShort', 'ExposureReduced'), c('Bank', 'Exposure')) 
+  }
+  # first set everything equal to all portfolios, overwrite with either SA or IRB
+  selectedData <- as.data.table(selectedData)
+  # for readability by user
+  selectedData[Country == '0', Country := 'All Countries']
+  selectedData[, Portfolio := 'All Portfolios']
+  selectedData[grepl('SA', ReplineID), Portfolio := 'SA']
+  selectedData[grepl('IRB', ReplineID), Portfolio := 'IRB']
+  
+  selectedData <- selectedData[, c('Bank', 'Country', 'Exposure', 'Portfolio', input$measureSelected), with = FALSE]
+  
+  colnames(selectedData) <- paste0('<span style="color:',"white",'">', c(colnames(selectedData)[1], colnames(selectedData)[2:length(colnames(selectedData))]),'</span>')
+  
+  DT::datatable(selectedData,escape=F,options=list(searching=FALSE, scrollY=paste0(as.character(420),'px'), scrollX=T, paging=F,bInfo=F)) %>%
+      formatStyle(columns = c(0:ncol(selectedData)), color = tableTextColor, backgroundColor = backgroundcolorTables)
+})
+
+```
+
+### <span style="color:`r borderTextColor`">ROE Waterfall Current Production (reporting in BPS of total amount used at t=0)</span> {.bgred}
+
+```{r}
+waterFallPlotCurrent <- reactive({
+
+
+  
+# function for waterfall plot
+createWaterfall <- function(dfNames,dfValues,isSum,isIntermediateSum,title,subTitle,xTitle,yTitle, thm){
+
+
+  df <- data.frame(name = dfNames,y = dfValues,stringsAsFactors = FALSE,
+                   isSum = as.logical(isSum),
+                   isIntermediateSum = as.logical(isIntermediateSum))
+
+  df <- df %>%
+    mutate(color = ifelse(y>0,lineColors[1],ifelse(y<0,lineColors[4],NA)))
+
+  maxY = max(cumsum(na.omit(dfValues)))      #sum(na.omit(dfValues[dfValues > 0])) + 1
+  minY = min(c(0,cumsum(na.omit(dfValues))))  #sum(na.omit(dfValues[dfValues < 0])) +100 - 1
+
+  datSeries <- list_parse(df)
+
+  highchart() %>%
+    hc_chart(type = "waterfall") %>%
+    #hc_title(text = title) %>%
+    #hc_subtitle(text = subTitle) %>%
+    hc_xAxis(categories = df$name,
+             title=list(text=xTitle)) %>%
+    hc_yAxis(title=list(text=yTitle), max = maxY, min = minY) %>%
+    hc_legend(enabled=FALSE) %>%
+    hc_tooltip(pointFormat="{point.y:,.2f}") %>%
+    hc_series(list(color=lineColors[9],
+                   data=datSeries,
+                   dataLabels=list(
+                     enabled=TRUE,
+                     format = '{point.y:,.2f}',
+                     style=list(
+                       fontWeight="bold",
+                       textShadow="0px 0px 3px black")),
+                   pointPadding=0)) %>%
+    hc_add_theme(thm)
+}
+
+countryFilterSetting <- as.vector(c(input$countryFilterSettingBDO1, input$countryFilterSettingBDO2, input$countryFilterSettingBDO3, input$countryFilterSettingBDO4))
+sectorFilterSetting <- as.vector(c(input$sectorFilterSettingBDO1, input$sectorFilterSettingBDO2))
+
+# define the minimum poolcutoffdate for the results table subset that corresponds with the selected inputs
+
+DT <- results()[(BankNameShort %in% sub("_EBAData2017Q2_Results.RData", "",input$bankDataSelectedSidebar)| BankNameShort %in% sub("_FDICData2018Q1_Results.RData", "",input$bankDataSelectedSidebar)) &
+                Country %in% countryFilterSetting &
+                ExposureReduced %in% sectorFilterSetting &
+                PortfolioLabel %in% input$Formula_Selected &
+                Scenario %in% c("EBA2018_baseline","CCAR2018_baseline"), ] 
+
+DT <- DT[PoolCutoffDate == min(PoolCutoffDate), ]
+
+totalLimitSum <- sum(DT$TotalLimit)
+
+Gross_Interest_Income <- round(10000 * sum(4 * DT$GII) / totalLimitSum, 2) # annualised GII
+FTP <- - round(10000 * sum(DT[, FTP_Rate * DrawnAmount * currentinterestrate]) / totalLimitSum, 2)
+Comm_Fees <- - round(10000 * sum(DT[, UndrawnAmount * committment_fee]) / totalLimitSum, 2)
+Overhead_Cost <- - round(10000 * sum(DT[, CostIncomeRatio * (4 * NII)]) / totalLimitSum, 2) # annualised NII
+Credit_Cost_1Y <- - round(10000 * sum(DT$ECL_1Y) / totalLimitSum, 2)
+Net_Income <- Gross_Interest_Income + FTP + Comm_Fees + Overhead_Cost + Credit_Cost_1Y 
+Tax <- - round(Net_Income * weighted.mean(x = DT$TaxRate, w = DT$TotalLimit), 2)
+NI_After_Tax <- Net_Income + Tax
+
+dfValues <- c(Gross_Interest_Income, FTP, Overhead_Cost, Credit_Cost_1Y, NA, Tax, NA)
+dfNames  <- c("Gross Interest Income", "FTP", "Cost", "1Y Credit Cost", "Net Income", "Tax","NI After Tax")
+isIntermediateSum = c(0,0,0,0,1,0,0)
+isSum = c(0,0,0,0,0,0,1)
+
+hcWaterfall <- createWaterfall(dfNames, dfValues, isSum, isIntermediateSum,"ROE waterfall of costs and income", "Reporting in BPS of total amount used","","As BPS of total used amount", thm)
+
+return(hcWaterfall)
+
+})
+
+
+renderHighchart({
+    if(nrow(results())==0 ) return(whitechart)
+  
+    waterFallPlotCurrent()
+})
+
+
+
+```
+
+
+Row
+-------------------------------------
+
+### <span style="color:`r borderTextColor`"> EAD, Drawn, Undrawn and Limit</span> {.bgred} 
+
+```{r}
+renderHighchart({ 
+   EADDrawnUndrawnLimitFigure() 
+}) 
+ 
+```
+
+```{r}
+
+EADDrawnUndrawnLimitFigure <- reactive({
+
+   countryFilterSetting <- as.vector(c(input$countryFilterSettingBDO1, input$countryFilterSettingBDO2, input$countryFilterSettingBDO3, input$countryFilterSettingBDO4))
+   sectorFilterSetting <- as.vector(c(input$sectorFilterSettingBDO1, input$sectorFilterSettingBDO2))
+
+DTL <- results()[(BankNameShort %in% sub("_EBAData2017Q2_Results.RData", "",input$bankDataSelectedSidebar)| BankNameShort %in% sub("_FDICData2018Q1_Results.RData", "",input$bankDataSelectedSidebar)) &
+                Country %in% countryFilterSetting &
+                ExposureReduced %in% sectorFilterSetting &
+                PortfolioLabel %in% input$Formula_Selected &
+                Scenario %in% c("EBA2018_baseline","CCAR2018_baseline"), ]
+   
+   EADDrawnUndrawnLimit <- DTL[PoolCutoffDate == min(PoolCutoffDate), 
+                    list(`EAD` = round(sum(EAD/1000, na.rm = TRUE), 4), 
+                        `Drawn Amount` = round(sum(DrawnAmount/1000, na.rm = TRUE), 4), 
+                        `Undrawn Amount` = round(sum(UndrawnAmount/1000, na.rm = TRUE), 4),
+                        `Total Limit` = round(sum(TotalLimit/1000, na.rm = TRUE), 4)),  
+                   by = 'DateYQ'] 
+
+   # gather to get the data into highchart format (it condenses the information in EADRWA's column 2, 3, and 4) 
+   EADDrawnUndrawnLimit <- gather(EADDrawnUndrawnLimit, "variable", "value", c(2, 3, 4, 5)) 
+   EADDrawnUndrawnLimit <- EADDrawnUndrawnLimit[order(EADDrawnUndrawnLimit$DateYQ), ] 
+   EADDrawnUndrawnLimit <- as.data.table(EADDrawnUndrawnLimit) 
+   # for now set to below min(DateYQ) + 10 
+   EADDrawnUndrawnLimit <- EADDrawnUndrawnLimit[DateYQ < min(DateYQ) + 10, ] 
+
+   return(hchart(EADDrawnUndrawnLimit, "column", hcaes(x = DateYQ, y = value, group = variable), borderWidth = 0) %>% 
+     hc_colors(c(lineColors[c(7, 4, 1)], 'green')) %>%  
+     # hc_xAxis(title=list(text='MM')) %>%  # due to the theme these are invisiable
+     # hc_yAxis(title=list(text='Date'))) %>% # due to the theme these are invisiable
+     hc_yAxis(labels=list(format = '{value} BN')) %>%  
+     hc_add_theme(thm) 
+      
+   )
+})
+
+```
+
+### <span style="color:`r borderTextColor`">RWA</span> <span style="color:`r borderTextColor`"></span> {.bgred}
+
+```{r}
+
+  
+ 
+renderHighchart({ 
+     if(nrow(results())==0 ) return(whitechart) 
+     B3B4Plot() 
+}) 
+ 
+
+
+```
+
+```{r}
+
+B3B4Plot <- reactive({
+
+  countryFilterSetting <- as.vector(c(input$countryFilterSettingBDO1, input$countryFilterSettingBDO2, input$countryFilterSettingBDO3, input$countryFilterSettingBDO4))
+  sectorFilterSetting <- as.vector(c(input$sectorFilterSettingBDO1, input$sectorFilterSettingBDO2))
+
+  results <- results()[(BankNameShort %in% sub("_EBAData2017Q2_Results.RData", "",input$bankDataSelectedSidebar)| BankNameShort %in% sub("_FDICData2018Q1_Results.RData", "",input$bankDataSelectedSidebar) )&
+                Country %in% countryFilterSetting &
+                ExposureReduced %in% sectorFilterSetting &
+                PortfolioLabel %in% input$Formula_Selected &
+                Scenario %in% c("EBA2018_baseline","CCAR2018_baseline") , ] # the %in% c is a (dirty) solution to fix the _ in three of four scenarios
+  
+  # by period plot
+  millionDivisor <- 1000
+  RWA <- results[PoolCutoffDate == min(PoolCutoffDate), 
+                 list(`RWA B3 IRBA` = round(sum(RWA_B3IRBA, na.rm = TRUE)/1000, 4),
+                       `RWA B3 SA` = round(sum(RWA_B3SA, na.rm = TRUE)/1000, 4),
+                       `RWA B4 IRBA` = round(sum(RWA_B4IRBA, na.rm = TRUE)/1000, 4),
+                       `RWA B4 SA` = round(sum(RWA_B4SA, na.rm = TRUE)/1000, 4),
+                       `RWA IRBA-SA Floor` = round(sum(RWA_IRBA_Floor, na.rm = TRUE)/1000, 4),
+                       `RWA SA Actual` = round(sum(RWA_SA_Actual, na.rm = TRUE)/1000, 4),
+                       `RWA IRBA Actual` = round(sum(RWA_IRBA_Actual, na.rm = TRUE)/1000, 4)
+                       ), by = 'DateYQ']
+
+  # gather to get the data into highchart format (it condenses the information in RWA's column 2, 3, and 4)
+  RWAData <- gather(RWA, "variable", "value", c(2, 3, 4, 5, 6, 7, 8))
+  RWAData <- RWAData[order(RWAData$DateYQ), ]
+  RWAData <- as.data.table(RWAData)
+  # for now set to below min(DateYQ) + 10, could perhaps be made interactive
+  RWAData <- RWAData[DateYQ < min(DateYQ) + 10, ]
+
+  return(hchart(RWAData, "column", hcaes(x = DateYQ, y = value, group = variable), borderWidth = 0) %>%
+                  hc_colors(c(lineColors[c(7,8,6:2)], 'green')) %>% # select 9, 7, 5, 3 for high contrast
+                  hc_add_theme(thm) %>%
+                  hc_yAxis(labels=list(format = '{value} BN'))) 
+                  # hc_xAxis(title=list(text='MM')) %>% # due to the theme these are invisiable
+                  # hc_yAxis(title=list(text='Date'))) # due to the theme these are invisiable
+ # due to the theme these are invisiable
+     # hc_yAxis(title=list(text='Date'))) %>% # due to the theme these are invisiable
+     
+  
+})
+
+
+```
+
+
+
+
+
+

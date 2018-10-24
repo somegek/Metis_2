@@ -1,0 +1,13 @@
+name: metisdemoph
+title: MetisDemoPH
+username: philip.de.koning
+account: philip.de.koning
+server: applications.os-is.com
+hostUrl: https://applications.os-is.com/__api__
+appId: 135
+bundleId: 808
+url: https://applications.os-is.com/content/135/
+when: 1535374027.66637
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: RCode

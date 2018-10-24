@@ -1,0 +1,273 @@
+```{r}
+# source functions
+source('plot_Index_Macros.R')
+
+```
+
+
+Credit Model {data-navmenu="Macro Modeling"}
+=====================================  
+
+```{r}
+
+shinyUI(
+  fluidPage(
+    navbarPage("",
+#          tabPanel(
+#          div(style="display: inline-block; align: center",
+#                shinyWidgets::dropdown(label=textOutput("tabsetCountryCM"), status = "primary",
+#         fluidRow(
+#          column(10,offset=0,
+#          div(style = "padding: 0px 0px; margin-left:0.1%",
+#          radioGroupButtons(inputId = "countryFilterCM", 
+#          label = "Country Selection", choices = unique(macroDataTable$country), checkIcon = list(yes =tags$i(class = "fa fa-check-square", 
+#     style = "color: steelblue"), 
+#      no = tags$i(class = "fa fa-square-o", 
+#      style = "color: steelblue")))
+#  )))
+#)
+#  ,
+#    circle = F, status = "primary",
+#    icon = icon("time"),
+#    tooltip = tooltipOptions(title = "Click to modify inputs")
+#)),
+        tabPanel(
+                 div(style="display: inline-block; align: center;",
+                     shinyWidgets::dropdown(label="Country", 
+                                            fluidRow( column(10,offset=0, 
+                                                             div(style = "",
+                                                                 tags$h4(""),
+                                                                 br(),
+                                                                 radioGroupButtons(inputId = "countryFilterCM", individual = T,
+                                                                                     choices=unique(macroDataTable$country), 
+                                                                                     selected = unique(macroDataTable$country)[1], checkIcon = list(yes = tags$i(class = "fa fa-circle", 
+                                                                                     style = "color: steelblue"), 
+                                                                                     no = tags$i(class = "fa fa-circle-o", 
+                                                                                     style = "color: steelblue")))))), 
+                                            circle = F, status = "primary", icon = icon("formula"),
+                                            width = "100px",tooltip = tooltipOptions(title = "Click to modify inputs")))),        
+        tabPanel(
+                 div(style="display: inline-block; align: center;",
+                     shinyWidgets::dropdown(label="Exposure", 
+                                            fluidRow( column(10,offset=0, 
+                                                             div(style = "",
+                                                                 tags$h4(""),
+                                                                 br(),
+                                                                 radioGroupButtons(inputId = 'exposureFilterCM', individual = T,
+                                                                                     choices=c("Corporates and CRE", "Retails-SME and Residential"), 
+                                                                                     selected = "Corporates and CRE", checkIcon = list(yes = tags$i(class = "fa fa-circle", 
+                                                                                     style = "color: steelblue"), 
+                                                                                     no = tags$i(class = "fa fa-circle-o", 
+                                                                                     style = "color: steelblue")))))), 
+                                            circle = F, status = "primary", icon = icon("formula"),
+                                            width = "250px",tooltip = tooltipOptions(title = "Click to modify inputs")))),
+#          tabPanel(
+#          div(style="display: inline-block; align: center;",
+#                shinyWidgets::dropdown(label= textOutput("tabsetExposureCM"), 
+#         fluidRow(
+#          column(10,offset=0,
+#          div(style = "padding: 0px 0px; margin-left:0.1%",
+#          radioGroupButtons(inputId = "exposureFilterCM", 
+#          label = "Exposure Type Selection", choices = c("Corporates and CRE", "Retails-SME and Residential"), checkIcon = list(yes =tags$i(class = "fa fa-check-square", 
+#     style = "color: steelblue"),
+#      no = tags$i(class = "fa fa-square-o", 
+#      style = "color: steelblue")))
+#          )))
+#)
+#  ,
+#    circle = F, status = "primary",
+#    icon = icon("time"), 
+#    tooltip = tooltipOptions(title = "Click to modify inputs")
+#)),
+tabPanel(
+          div(style="display: inline-block; align: center;",
+                shinyWidgets::dropdown(label='Dates', status = "primary",
+         fluidRow(
+          column(10,offset=0,
+          div(style = "padding: 10px 0px; margin-left:0.1%",
+              sliderInput(inputId = "macroFromYear",
+  label = "Period",
+  min = min(macroDataTable$TIME),
+  max = max(macroDataTable$TIME),
+  value = c(min(macroDataTable$TIME), 2024),
+  sep = "",
+  width = '150'))
+  )))
+          )
+)
+) 
+
+, 
+HTML("<script>var parent = document.getElementsByClassName('navbar-nav');
+parent[0].insertAdjacentHTML( 'afterend', '<ul class=\"nav navbar-nav navbar-right\"><li class=\"disabled\"><a href=\"#\">v0.1</a></li></ul>' );</script>")
+))
+
+
+
+    output$tabsetCountryCM <- renderText({
+      #paste0("Country selected: ", input$countryFilterCM)
+      input$countryFilterCM
+    })
+       output$tabsetExposureCM <- renderText({
+      #paste0("Country selected: ", input$countryFilterCM)
+      input$exposureFilterCM
+    })
+
+```
+
+```{r, include=FALSE}
+
+getMacroCharts <- reactive({
+  macroFromYear <- as.numeric(input$macroFromYear)
+  macroDataTable <- macroDataTable[is.na(sector) | sector== "Business"]
+#browser()
+  macroData <- macroDataTable[ AssetClass == "Corporates" & country == input$countryFilterCM]
+  macroData <- macroData[, colSums(!is.na(macroData))>0, with = F]
+  macroOutput_corps <- macro_Figure(macroData, thm=thm, fromDate = as.numeric(macroFromYear)[1], toDate = as.numeric(macroFromYear)[2]) %>% hc_title(text = "Macroeconomic Scenarios - Corporates")
+  index_FigureOutput_corps <- index_Figure(macroData,thm=thm,fromDate = as.numeric(macroFromYear)[1], toDate = as.numeric(macroFromYear)[2]) %>% hc_title(text ="Aggregated PD Index (Systematic Risk) - Corporates")
+  
+  macroData <- macroDataTable[ AssetClass == "CRE" & country == input$countryFilterCM]
+  macroData <- macroData[, colSums(!is.na(macroData))>0, with = F] 
+  macroOutput_cre <- macro_Figure(macroData, thm=thm, fromDate = as.numeric(macroFromYear)[1], toDate = as.numeric(macroFromYear)[2]) %>% hc_title(text = "Macroeconomic Scenarios - CRE")
+  index_FigureOutput_cre <- index_Figure(macroData,thm=thm,fromDate = as.numeric(macroFromYear)[1], toDate = as.numeric(macroFromYear)[2]) %>% hc_title(text ="Aggregated PD Index (Systematic Risk) - CRE")
+  
+  macroData <- macroDataTable[ AssetClass == "Retail - SME" & country == input$countryFilterCM]
+  macroData <- macroData[, colSums(!is.na(macroData))>0, with = F]
+  if(input$countryFilterCM == "US"){
+    macroOutput_sme <- macroOutput_corps %>% hc_title(text = "Macroeconomic Scenarios - Retail-SME")
+    index_FigureOutput_sme <- index_FigureOutput_corps %>% hc_title(text ="Aggregated PD Index (Systematic Risk) - Retail-SME")
+  }else{
+    macroOutput_sme <- macro_Figure(macroData, thm=thm, fromDate = as.numeric(macroFromYear)[1], toDate = as.numeric(macroFromYear)[2]) %>% hc_title(text = "Macroeconomic Scenarios - Retail-SME")
+  index_FigureOutput_sme <- index_Figure(macroData,thm=thm,fromDate = as.numeric(macroFromYear)[1], toDate = as.numeric(macroFromYear)[2]) %>% hc_title(text ="Aggregated PD Index (Systematic Risk) - Retail-SME")
+  }
+  
+  
+  macroData <- macroDataTable[ AssetClass == "residential" & country == input$countryFilterCM]
+  macroData <- macroData[, colSums(!is.na(macroData))>0, with = F]
+  if(input$countryFilterCM == "US"){
+    macroOutput_resid <- macroOutput_corps %>% hc_title(text = "Macroeconomic Scenarios - Residential")
+    index_FigureOutput_resid <- index_FigureOutput_corps %>% hc_title(text ="Aggregated PD Index (Systematic Risk) - Residential")
+  }else{
+  macroOutput_resid <- macro_Figure(macroData, thm=thm, fromDate = as.numeric(macroFromYear)[1], toDate = as.numeric(macroFromYear)[2]) %>% hc_title(text = "Macroeconomic Scenarios - Residential")
+  index_FigureOutput_resid <- index_Figure(macroData,thm=thm,fromDate = as.numeric(macroFromYear)[1], toDate = as.numeric(macroFromYear)[2]) %>% hc_title(text ="Aggregated PD Index (Systematic Risk) - Residential")
+  }
+  
+  if(input$exposureFilterCM == "Corporates and CRE"){
+    index_FigureOutput_one <- index_FigureOutput_corps 
+    macroOutput_one <- macroOutput_corps
+    index_FigureOutput_two <- index_FigureOutput_cre
+    macroOutput_two <- macroOutput_cre
+  }else{
+    index_FigureOutput_one <- index_FigureOutput_sme 
+    macroOutput_one <- macroOutput_sme
+    index_FigureOutput_two <- index_FigureOutput_resid
+    macroOutput_two <- macroOutput_resid
+  }
+  return(list(index_FigureOutput_one = index_FigureOutput_one, macroOutput_one=macroOutput_one, index_FigureOutput_two = index_FigureOutput_two, macroOutput_two=macroOutput_two))
+# return(list(index_FigureOutput_corps = index_FigureOutput_corps, macroOutput_corps=macroOutput_corps, index_FigureOutput_cre = index_FigureOutput_cre, macroOutput_cre=macroOutput_cre, index_FigureOutput_sme = index_FigureOutput_sme, macroOutput_sme=macroOutput_sme, index_FigureOutput_resid = index_FigureOutput_resid, macroOutput_resid=macroOutput_resid))
+})
+
+
+```
+Row
+-----------------------------------------------
+### </span> {.bgred}
+
+```{r}
+
+renderHighchart({
+   getMacroCharts()$macroOutput_one  
+})
+
+
+```
+
+<!-- borderTextColor sets the color of 'Example Figures' and {.bgred} implements css code of Main.Rmd for the panel Example Figures. -->
+### </span> {.bgred}
+
+```{r}
+
+renderHighchart({
+   getMacroCharts()$index_FigureOutput_one   
+})
+
+```
+
+Row
+-----------------------------------------------
+### </span> {.bgred}
+
+```{r}
+
+renderHighchart({
+   getMacroCharts()$macroOutput_two
+})
+
+
+```
+
+
+<!-- borderTextColor sets the color of 'Example Figures' and {.bgred} implements css code of Main.Rmd for the panel Example Figures. -->
+### </span> {.bgred}
+
+```{r}
+
+renderHighchart({
+   getMacroCharts()$index_FigureOutput_two   
+})
+
+```
+
+<!-- Row -->
+<!-- ----------------------------------------------- -->
+
+<!-- ### <span style="color:`r borderTextColor`">Macroeconomic Scenarios - Retail-SME</span> {.bgred} -->
+
+
+<!-- ```{r} -->
+
+<!-- renderHighchart({ -->
+<!--    getMacroCharts()$macroOutput_sme -->
+<!-- }) -->
+
+
+<!-- ``` -->
+
+
+<!-- <!-- borderTextColor sets the color of 'Example Figures' and {.bgred} implements css code of Main.Rmd for the panel Example Figures. --> 
+<!-- ### <span style="color:`r borderTextColor`">Aggregated PD Index (Systematic Risk) - Retail-SME</span> {.bgred} -->
+
+<!-- ```{r} -->
+
+<!-- renderHighchart({ -->
+<!--    getMacroCharts()$index_FigureOutput_sme  -->
+<!-- }) -->
+
+<!-- ``` -->
+
+<!-- Row -->
+<!-- ----------------------------------------------- -->
+
+<!-- ### <span style="color:`r borderTextColor`">Macroeconomic Scenarios - Residential</span> {.bgred} -->
+
+
+<!-- ```{r} -->
+
+<!-- renderHighchart({ -->
+<!--    getMacroCharts()$macroOutput_resid -->
+<!-- }) -->
+
+
+<!-- ``` -->
+
+
+<!-- <!-- borderTextColor sets the color of 'Example Figures' and {.bgred} implements css code of Main.Rmd for the panel Example Figures. --> 
+<!-- ### <span style="color:`r borderTextColor`">Aggregated PD Index (Systematic Risk) - Residential</span> {.bgred} -->
+
+<!-- ```{r} -->
+
+<!-- renderHighchart({ -->
+<!--    getMacroCharts()$index_FigureOutput_resid   -->
+<!-- }) -->
+
+<!-- ``` -->

@@ -1,0 +1,35 @@
+
+Input Parameter Assumptions
+=====================================  
+
+Row 
+-------------------------------------
+ 
+### Full Inputs
+ 
+```{r}
+
+DT::renderDataTable({
+  
+  DT::datatable(manipulatedData()$fullData)
+  
+})
+
+```
+ 
+ 
+Row 
+-------------------------------------
+
+### Partial Inputs (Selected Fields in Bank Data Overview)
+
+```{r}
+
+DT::renderDataTable({
+  
+  # filter with inputFilter
+  DT::datatable(manipulatedData()$filteredInputData)
+  
+})
+
+```

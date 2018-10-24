@@ -1,0 +1,421 @@
+CAPL Graphing  {data-navmenu="Bank Profit and Capital"}
+=====================================
+
+```{r}
+#### Fourth we render everything in a navbar
+
+shinyUI(
+  fluidPage(
+    navbarPage("",
+               tabPanel(
+                 div(style="display: inline-block; align: center;",
+                     shinyWidgets::dropdown(label='B4 SA Floor', 
+                                            fluidRow( column(10,offset=0, 
+                                                             div(style = "padding: 0px 0px; margin-left:0.1%",
+                                                                 tags$h4(""),
+                                                                 br(),
+                                                                 radioGroupButtons(inputId = 'B4SAFloor', individual = T,
+                                                                                     choices=c("B4 SA Floor: Yes","B4 SA Floor: No"), 
+                                                                                     selected = "B4 SA Floor: Yes", checkIcon = list(yes = tags$i(class = "fa fa-circle", 
+                                                                                     style = "color: steelblue"), 
+                                                                                     no = tags$i(class = "fa fa-circle-o", 
+                                                                                     style = "color: steelblue")))))), 
+                                            circle = F, status = "primary", icon = icon("formula"),
+                                            width = "200px",tooltip = tooltipOptions(title = "Click to modify inputs")))),
+               tabPanel(
+                 div(style="display: inline-block; align: center;",
+                     shinyWidgets::dropdown(label='Risk Transfer', 
+                                            fluidRow( column(4,offset=0, 
+                                                             div(style = "",
+                                                                 tags$h4(""),
+                                                                 br(),
+                                                                 radioGroupButtons(inputId = 'SwitchDisplayRT', individual = T,
+                                                                                     choices=c("Before Risk Transfer","After Risk Transfer"), 
+                                                                                     selected = "Before Risk Transfer", checkIcon = list(yes = tags$i(class = "fa fa-circle", 
+                                                                                     style = "color: steelblue"), 
+                                                                                     no = tags$i(class = "fa fa-circle-o", 
+                                                                                     style = "color: steelblue")))))), 
+                                            circle = F, status = "primary", icon = icon("formula"),
+                                            width = "200px",tooltip = tooltipOptions(title = "Click to modify inputs")))),
+                 tabPanel(
+                 div(style="display: inline-block; align: center;",
+                     shinyWidgets::dropdown(label='Capital View', 
+                                            fluidRow( column(10,offset=0, 
+                                                             div(style = "padding: 0px 0px; margin-left:0.1%",
+                                                                 tags$h4(""),
+                                                                 br(),
+                                                                 radioGroupButtons(inputId = 'RelativeorAbsolute', individual = T,
+                                                                                     choices=c("Relative","Absolute"), 
+                                                                                     selected = "Relative", checkIcon = list(yes = tags$i(class = "fa fa-circle", 
+                                                                                     style = "color: steelblue"), 
+                                                                                     no = tags$i(class = "fa fa-circle-o", 
+                                                                                     style = "color: steelblue")))))), 
+                                            circle = F, status = "primary", icon = icon("formula"),
+                                            width = "150px",tooltip = tooltipOptions(title = "Click to modify inputs")))),
+               tabPanel(
+                 div(style="display: inline-block; align: center;",
+                     shinyWidgets::dropdown(label = 'Scenario',
+                                            fluidRow(column(10,offset=0,
+                                                            div(style = "padding: 0px 0px; margin-left:0.1%",
+                                                                tags$h4(""),
+                                                                br(),
+                                                                uiOutput(outputId = 'scenariosSelectionSummary'),
+                                                                bsTooltip(id = "Scenario", title = " ",
+                                                                          placement = "top", trigger = "hover")))),
+                                            circle = F, status = "primary", icon = icon("time"), width = "200px",
+                                            tooltip = tooltipOptions(title = "Click to modify inputs"))))
+  ), 
+    HTML("<script>var parent = document.getElementsByClassName('navbar-nav');
+         parent[0].insertAdjacentHTML( 'afterend', '<ul class=\"nav navbar-nav navbar-right\"><li class=\"disabled\"><a href=\"#\">v0.1</a></li></ul>' );</script>")
+    ))
+output$scenariosSelectionSummary <- renderUI({
+  tagList(
+        radioGroupButtons(inputId = 'ScenarioSummary', individual = T, choices=unique(resultsFiltered()$Scenario), 
+                                                                         selected = unique(resultsFiltered()$Scenario)[2], 
+                                                                                                     checkIcon = list(yes = tags$i(class = "fa fa-circle", 
+                                                                         style = "color: steelblue"), 
+                                                                         no = tags$i(class = "fa fa-circle", 
+                                                                         style = "color: white")))
+  )
+})
+output$switchtoggle <- renderUI({
+  tagList(
+        switchInput(inputId = "id", value = TRUE)
+  )
+})
+outputOptions(x = output, name = "scenariosSelectionSummary", suspendWhenHidden = FALSE)
+
+
+```
+
+Row {data-height=80}
+-------------------------------------
+  
+### <span style="color:`r valueBoxTextColor`"></span>
+
+```{r}
+renderValueBox({
+  valueBox(tags$p(paste('Scenario:', 
+                         c('EBA Adverse','EBA Baseline','OSIS Extreme','OSIS Optimal','CCAR Adverse','CCAR Baseline')[which(input$ScenarioSummary==unique(resultsFiltered()$Scenario))]), style = "font-size: 50%;"))
+})
+```
+
+### <span style="color:`r valueBoxTextColor`"></span>
+
+```{r}
+renderValueBox({
+  valueBox(tags$p(paste('View:', ifelse(input$SwitchDisplayRT=='Before Risk Transfer','Before Risk Transfer', 'After Risk Transfer')), style = "font-size: 50%;"))
+})
+```
+
+
+```{r}
+resultsSelectRW<- reactive({
+input$renewValue
+#input$SwitchIRB
+#input$B4SAFloor
+#Calculate actual required capital with or without B4 SA floor
+results <- copy(resultsFiltered())
+
+results[PortfolioLabel=="SA", RW := RWA_SA_Actual/EAD]
+results[PortfolioLabel=="SA", RWA := RWA_SA_Actual]
+results[PortfolioLabel=="SA", CapitalCharge_Required := RWA_SA_Actual * CT1_Target]
+if(input$B4SAFloor=="B4 SA Floor: No") {
+  results[PortfolioLabel=="IRB", RW := RWA_IRBA_Actual/EAD]
+  results[PortfolioLabel=="IRB", RWA := RWA_IRBA_Actual]
+  results[PortfolioLabel=="IRB", CapitalCharge_Required := RWA_IRBA_Actual * CT1_Target]
+} else {
+  results[PortfolioLabel=="IRB", RW := RWA_IRBA_Floor/EAD]
+  results[PortfolioLabel=="IRB", RWA := RWA_IRBA_Floor]
+  results[PortfolioLabel=="IRB", CapitalCharge_Required := RWA_IRBA_Floor * CT1_Target]
+} 
+
+#Risk weight of retained senior tranche
+results[PortfolioLabel=="IRB", RW_RetainedSenior := 0.07]
+results[PortfolioLabel=="IRB" & DateYQ>2020, RW_RetainedSenior := 0.15] #Check intro timeline of SEC IRB, here ignore STS
+results[PortfolioLabel=="SA", RW_RetainedSenior := 0.2]
+
+#Repline P&L and ROE
+results[, ExpectedLossPerc := ECL_1Y/EAD] #PIT
+results[, CapitalChargePerc := RW / 12.5] #100% RW = 0.08 capital charge, note that capitalcharge is based on actual CT1 ratio of 0.1
+results[, KIRB := CapitalChargePerc + ExpectedLossPerc]
+
+#Size first loss piece in percentage of total limit as multiple of KIRB
+results[, SizeFLP := pmax(pmin(KIRB, 0.15), 0.025)] 
+#Equal to KIRB subject to cap and floor. TO DO: Check why so many KIRB>15%, is that due to defaulters?
+#TO DO: current SizeFLP varies with rating migration, is this reasonable?
+
+results[, GII := UndrawnAmount*committment_fee + DrawnAmount*currentinterestrate/4]# quarterlyTO DO: deduct defaulted amounts
+results[, NII := GII - FTP_Rate*DrawnAmount*currentinterestrate/4]
+results[, PreTaxProfit := (1 - CostIncomeRatio)*NII - (Stage1ECLFlow + Stage2ECLFlow + Stage3ECL)] 
+results[, PostTaxProfit := PreTaxProfit * (1 - TaxRate)] 
+results[, ROE := 4*PostTaxProfit / CapitalCharge_Required] #annualized, ROE based on required capital
+
+#Calculate available capital by business: assume initial allocation of CT1 capital is proportional to RWA
+# poolDate <- min(results$DateYQ)
+# results[, BusinessID := paste0(BankNameShort, "_", Country, "_", ExposureReduced, "_", PortfolioLabel)] #"Business" includes all vintages, required for available capital
+# results[, RWA_initial_mod := sum(RWA[DateYQ==poolDate]), by=c("Scenario", "BusinessID")]  #modelled RWA, TO DO: investigate main source of difference in proprocess
+# results[, CT1_AMT_initial := CT1_fully*RWA_initial_mod] #use modelled RWA for consistency
+# 
+# #Calculate capital generation and return on available capital by business
+# resultsBusiness <- results[, .(PostTaxProfit = sum(PostTaxProfit),
+#                                RWA_initial_mod = min(RWA_initial_mod),
+#                                RWA=sum(RWA),
+#                                CT1_AMT_initial = min(CT1_AMT_initial),
+#                                Dividend=min(Dividend)), by=c("Scenario", "BusinessID", "DateYQ")] #quarterly profit aggregated over all vintages
+# 
+# resultsBusiness[, DividendPayout := pmax(PostTaxProfit * Dividend, 0)]
+# resultsBusiness[, CapitalIncrement := PostTaxProfit - DividendPayout] #quarterly profit post div
+# resultsBusiness[, CT1_AMT_avail := CT1_AMT_initial + cumsum(CapitalIncrement), by=c("Scenario", "BusinessID")] #Available CT1
+# resultsBusiness[, CT1_avail := CT1_AMT_avail/RWA]
+# resultsBusiness[, ROE_avail := 4*PostTaxProfit / CT1_AMT_avail]  
+
+########################################################
+#Calculate impact of risk transfer strategies, After Risk Transfer ART. Notation: exposures and measures without suffix indicate no risk distribution. _ART indicated numbers 
+
+results[, TotalLimit_ART := TotalLimit * (1 - PercSynd - PercDebtFund)]
+results[, EAD_ART := EAD * (1 - PercSynd - PercDebtFund)] #synthetic does not change EAD nor TL
+results[, RWA_ART := RWA * (1 - PercSynd - PercDebtFund - PercCRT) + TotalLimit*PercCRT*RW_RetainedSenior]
+results[, Stage3ECL_ART :=  Stage3ECL*(1 - PercSynd - PercDebtFund - PercCRT)] #Flow and stock, assume synthetic CRT absorbs all losses
+results[, Stage2ECL_ART :=  Stage2ECL*(1 - PercSynd - PercDebtFund)] #assume stage 1 and 2 ECL unchanged by synthetic CRT
+results[, Stage1ECL_ART :=  Stage1ECL*(1 - PercSynd - PercDebtFund)]
+results[, Stage1ECLFlow_ART := c(0,diff(Stage1ECL_ART)), by=c("BankNameShort", "Scenario", "LoanIdentifier")] #allow for more than one bank in results table
+results[, Stage2ECLFlow_ART := c(0,diff(Stage2ECL_ART)), by=c("BankNameShort", "Scenario", "LoanIdentifier")]
+
+results[, GII_ART := ((UndrawnAmount*committment_fee + DrawnAmount*currentinterestrate)*(1 - PercSynd - PercDebtFund) + TotalLimit*PercDebtFund*debtfund_fee)/4]#TO DO: deduct defaulted amounts
+results[, CRT_cost := TotalLimit*PercCRT*SizeFLP*SpreadFLP/4] #TO DO: link funding cost to market spreads
+results[, NII_ART := GII_ART - FTP_Rate*(1 - PercSynd - PercDebtFund)*DrawnAmount*currentinterestrate/4 - CRT_cost] # TO DO: FTP_Rate defined as IntExp as perc of GII, maybe other definitions are more intuitive 
+
+results[, PreTaxProfit_ART := (1 - CostIncomeRatio)*NII_ART - (Stage1ECLFlow_ART + Stage2ECLFlow_ART + Stage3ECL_ART)] 
+results[, PostTaxProfit_ART := PreTaxProfit_ART * (1 - TaxRate)] 
+results[, CapitalCharge_Required_ART := RWA_ART *CT1_Target]
+results[, ROE_ART := 4*PostTaxProfit_ART / CapitalCharge_Required_ART]
+
+#Calculate capital generation as above with RWA_ART and PortTaxProfit_ART
+
+
+#####
+
+#Total cumulative loss
+results[, CumulativeLoss := cumsum(MarginalEL), by=c("BankNameShort", "Scenario", "LoanIdentifier")]#Vintage repline cumulative loss
+results[, InitialLimit := data.table::first(TotalLimit), by=c("BankNameShort", "Scenario", "LoanIdentifier")]
+results[, InitialLimit_ART := data.table::first(TotalLimit_ART), by=c("BankNameShort", "Scenario", "LoanIdentifier")]
+results[, CumLossPercInitialLimit := CumulativeLoss/InitialLimit]
+#Selected portfolio cumulative loss
+results[, CumulativeLoss_ART := CumulativeLoss * (1 - PercSynd - PercDebtFund - PercCRT)] 
+results[, CumLossPercInitialLimit_ART := CumulativeLoss_ART/InitialLimit_ART]
+
+ return(results)
+})
+
+resultsBusinessLines<- reactive({
+
+resultsBusinessLines <- copy(resultsSelectRW())
+poolDate <- min(resultsBusinessLines$DateYQ)
+resultsBusinessLines[, BusinessLine := paste(PortfolioLabel, ExposureReduced, Country)] #"Business" includes all vintages, required for available capital
+resultsBusinessLines[, RWA_initial_mod := sum(RWA[DateYQ==poolDate]), by= c('Scenario','BusinessLine')]  #modelled RWA, TO DO: investigate main source of difference in proprocess
+resultsBusinessLines[, CT1_AMT_initial := CT1_fully*RWA_initial_mod] #use modelled RWA for consistency
+resultsBusinessLines[, RWA_initial_mod_ART := sum(RWA_ART[DateYQ==poolDate]), by=c('Scenario','BusinessLine')]  #modelled RWA, TO DO: investigate main source of difference in proprocess
+resultsBusinessLines[, CT1_AMT_initial_ART := CT1_fully*RWA_initial_mod_ART] #use modelled RWA for consistency
+
+#Calculate capital generation and return on available capital by business
+resultsBusinessLines <- resultsBusinessLines[ , 
+                              .(PostTaxProfit_BRT  = sum(PostTaxProfit, na.rm = T),
+                               PostTaxProfit_ART   = sum(PostTaxProfit_ART, na.rm = T),
+                               RWA_BRT             = sum(RWA, na.rm = T),
+                               RWA_ART             = sum(RWA_ART),
+                               TotalLimit_BRT      = sum(TotalLimit, na.rm = T),
+                               TotalLimit_ART      = sum(TotalLimit_ART, na.rm = T),
+                               EAD_BRT             = sum(EAD, na.rm = T),
+                               EAD_ART             = sum(EAD_ART, na.rm = T),
+                               CT1_AMT_initial_BRT = min(CT1_AMT_initial),
+                               CT1_AMT_initial_ART = min(CT1_AMT_initial_ART),
+                               ROE_req_BRT         = weighted.mean(ROE, EAD, na.rm = T),
+                               ROE_req_ART         = weighted.mean(ROE_ART, EAD, na.rm = T),
+                               Dividend=min(Dividend)), by=c("Scenario", "BusinessLine", "DateYQ")] #quarterly profit aggregated over all vintages
+#BRT Results
+resultsBusinessLines[, DividendPayout_BRT := pmax(PostTaxProfit_BRT * Dividend, 0)]
+resultsBusinessLines[, CapitalIncrement_BRT := PostTaxProfit_BRT - DividendPayout_BRT] #quarterly profit post div
+resultsBusinessLines[, CT1_AMT_avail_BRT := CT1_AMT_initial_BRT + cumsum(CapitalIncrement_BRT), by=c('Scenario','BusinessLine')] #Available CT1
+resultsBusinessLines[, CT1_avail_BRT := CT1_AMT_avail_BRT/RWA_BRT]
+resultsBusinessLines[, ROE_avail_BRT     := 4 * PostTaxProfit_BRT / CT1_AMT_avail_BRT]
+resultsBusinessLines[, LeverageRatio_BRT :=  CT1_AMT_avail_BRT/TotalLimit_BRT * 47620/44568] #scaling factor to convert CET1 to T1, for ING only. TO DO: other banks
+resultsBusinessLines[, T1_Capital_BRT    :=  CT1_AMT_avail_BRT * 47620/44568 ] #scaling factor to convert CET1 to T1, for ING only. TO DO: other banks
+#ART Results
+resultsBusinessLines[, DividendPayout_ART := pmax(PostTaxProfit_ART * Dividend, 0)]
+resultsBusinessLines[, CapitalIncrement_ART := PostTaxProfit_ART - DividendPayout_ART] #quarterly profit post div
+resultsBusinessLines[, CT1_AMT_avail_ART := CT1_AMT_initial_ART + cumsum(CapitalIncrement_ART), by=c('Scenario','BusinessLine')] #Available CT1
+resultsBusinessLines[, CT1_avail_ART := CT1_AMT_avail_ART/RWA_ART]
+resultsBusinessLines[, ROE_avail_ART     := 4 * PostTaxProfit_ART / CT1_AMT_avail_ART]
+resultsBusinessLines[, LeverageRatio_ART :=  CT1_AMT_avail_ART/TotalLimit_ART * 47620/44568 ] #scaling factor to convert CET1 to T1, for ING only. TO DO: other banks
+resultsBusinessLines[, T1_Capital_ART    :=  CT1_AMT_avail_ART * 47620/44568 ] #scaling factor to convert CET1 to T1, for ING only. TO DO: other banks
+resultsBusinessLines[rowSums(is.na(resultsBusinessLines)) != ncol(resultsBusinessLines),]
+
+return(list(resultsBusinessLines = resultsBusinessLines))
+})
+
+ResultsBRT_ART <- reactive({
+#select appropriate variable: BRT or ART
+suffixRT <- ifelse(input$SwitchDisplayRT=='Before Risk Transfer','BRT','ART')
+SelectDisplay <- paste(c('EAD', 'RWA', 'PostTaxProfit', 'ROE_avail', 'CT1_avail', 'CT1_AMT_avail','LeverageRatio','T1_Capital'), suffixRT, sep = '_')
+ResultsBRT_ART <- subset(resultsBusinessLines()$resultsBusinessLines, select = c('DateYQ','Scenario', 'BusinessLine', SelectDisplay))
+names(ResultsBRT_ART) <- c('DateYQ','Scenario', 'BusinessLine', 'EAD','RWA',  'PostTaxProfit', 'ROE_avail', 'CT1_avail','CT1_AMT_avail', 'LeverageRatio','T1_Capital') 
+if(!grepl(("ING|ABN|AMRO|Banco| Santander|Barclays|Pfandbriefbank|Rabobank"),input$bankDataSelectedSidebar)){
+    ResultsBRT_ART[,EAD:=EAD/1000]
+    ResultsBRT_ART[,RWA:=RWA/1000]
+    ResultsBRT_ART[,PostTaxProfit:=PostTaxProfit/1000]
+    ResultsBRT_ART[,CT1_avail:=CT1_avail/100]
+    ResultsBRT_ART[,ROE_avail:=ROE_avail*100]
+    ResultsBRT_ART[,LeverageRatio:=LeverageRatio/100]}
+
+ResultsBRT_ART[rowSums(is.na(ResultsBRT_ART)) != ncol(ResultsBRT_ART),]
+
+PlotColors <- data.table(BusinessLine = unique(ResultsBRT_ART$BusinessLine),
+                          Color = rep(lineColors[-1], length.out = length(unique(ResultsBRT_ART$BusinessLine))))
+#add aggregation for some parameters if more than one repline is selected
+if (length(unique(ResultsBRT_ART$BusinessLine))>1){
+AggregatedReplines <- ResultsBRT_ART[,.(BusinessLine = "Repline Aggregate",
+                                        EAD = NA,#sum(EAD),
+                                        RWA = NA,#sum(RWA),
+                                        PostTaxProfit = NA,#sum(PostTaxProfit),
+                                        ROE_avail = weighted.mean(ROE_avail, EAD, na.rm = T),
+                                        CT1_avail = weighted.mean(CT1_avail, EAD, na.rm = T),
+                                        CT1_AMT_avail = NA,
+                                        LeverageRatio = weighted.mean(LeverageRatio, EAD, na.rm = T),
+                                        T1_Capital = NA), by=c("DateYQ","Scenario")]
+ResultsBRT_ART <- rbind(AggregatedReplines,ResultsBRT_ART)
+}
+PlotColors <- data.table(BusinessLine = unique(ResultsBRT_ART$BusinessLine),
+                          Color = rep(lineColors[-1], length.out = length(unique(ResultsBRT_ART$BusinessLine))))
+                          
+PlotColors[BusinessLine=='Repline Aggregate', Color := lineColors[1]]
+setkey(PlotColors,BusinessLine)
+setkey(ResultsBRT_ART, BusinessLine)
+
+ return(list(ResultsBRT_ART = ResultsBRT_ART, PlotColors = PlotColors))
+})
+```
+
+Row
+-----------------------------------
+
+### <span style="color:`r borderTextColor`">EAD</span>
+
+```{r}
+renderHighchart({
+  hchart(ResultsBRT_ART()$ResultsBRT_ART[BusinessLine!="Repline Aggregate" & Scenario==input$ScenarioSummary], "line", hcaes(x = DateYQ, y = round(EAD/1000,2), group = BusinessLine))%>%
+  hc_yAxis(title=list(text='EAD'),labels=list(format = '{value} BN')) %>%
+  hc_xAxis(title=list(text='Period'))%>%
+  hc_add_theme(thm) %>%
+  hc_colors(ResultsBRT_ART()$PlotColors[BusinessLine!="Repline Aggregate"]$Color) 
+})
+```
+
+### <span style="color:`r borderTextColor`">RWA</span>
+
+```{r}
+renderHighchart({
+  hchart(ResultsBRT_ART()$ResultsBRT_ART[BusinessLine!="Repline Aggregate" & Scenario==input$ScenarioSummary], "line", hcaes(x = DateYQ, y = round(RWA/1000,2), group = BusinessLine))%>%
+  hc_yAxis(title=list(text='RWA'),labels=list(format = '{value} BN')) %>%
+  hc_xAxis(title=list(text='Period'))%>%
+  hc_add_theme(thm) %>%
+  hc_colors(ResultsBRT_ART()$PlotColors[BusinessLine!="Repline Aggregate"]$Color) 
+})
+```
+
+### <span style="color:`r borderTextColor`">Post-Tax Profit Annualised</span>
+
+```{r}
+renderHighchart({
+  hchart(ResultsBRT_ART()$ResultsBRT_ART[BusinessLine!="Repline Aggregate" & Scenario==input$ScenarioSummary], "line", hcaes(x = DateYQ, y = round(PostTaxProfit * 4,2), group = BusinessLine))%>%
+  hc_yAxis(title=list(text='Post-Tax Profit Annualised'),labels=list(format = '{value} MM')) %>%
+  hc_xAxis(title=list(text='Period'))%>%
+  hc_add_theme(thm) %>%
+  hc_colors(ResultsBRT_ART()$PlotColors[BusinessLine!="Repline Aggregate"]$Color) 
+})
+
+```
+
+Row
+-------------------------------------
+
+### <span style="color:`r borderTextColor`">Return on Equity</span>
+
+```{r}
+renderHighchart({
+  hchart(ResultsBRT_ART()$ResultsBRT_ART[Scenario==input$ScenarioSummary], "line", hcaes(x = DateYQ, y = round(ROE_avail * 100,2), group = BusinessLine))%>%
+  hc_yAxis(title=list(text='ROE'),labels=list(format = '{value} %')) %>%
+  hc_xAxis(title=list(text='Period'))%>%
+  hc_add_theme(thm) %>%
+  hc_colors(ResultsBRT_ART()$PlotColors$Color)
+})
+
+```
+
+
+### <span style="color:`r borderTextColor`">`r renderText(return(if(input$RelativeorAbsolute=='Relative'){'CET1 Ratio'} else{'CET1 (A = Available, T = Targeted)'}))`</span>
+
+```{r}
+AbsolutevsRelativePlotting <- reactive({
+if(input$RelativeorAbsolute=='Relative'){
+  LeveragePlot <- hchart(ResultsBRT_ART()$ResultsBRT_ART[Scenario==input$ScenarioSummary], "line", hcaes(x = DateYQ, y = round(LeverageRatio * 100,2), group = BusinessLine))%>%
+                              hc_yAxis(title=list(text='Leverage Ratio'),labels=list(format = '{value} %'), min = 0,
+                              plotLines = list(list(color = '#fa9119', value = 4.7, width = 3, label = list(align = 'right', text = 'Leverage Ratio Target', 
+                                                                                      style = list(color = 'white', fontWeight = 'bold', fontSize = '16px'))))) %>%
+                              hc_xAxis(title=list(text='Period'))%>%
+                              hc_add_theme(thm) %>%
+                              hc_colors(ResultsBRT_ART()$PlotColors$Color) 
+ CapitalPlot  <- hchart(ResultsBRT_ART()$ResultsBRT_ART[Scenario==input$ScenarioSummary], "line", hcaes(x = DateYQ, y = round(CT1_avail * 100,2), group = BusinessLine))%>%
+                      hc_yAxis(title=list(text='CET1 ratio'),labels=list(format = '{value} %'), min = 0,
+                               plotLines = list(list(color = '#fa9119', value = 11.8, width = 3, label = list(align = 'right', text = 'CT1 Ratio Target', 
+                               style = list(color = 'white', fontWeight = 'bold', fontSize = '15px'))))) %>%
+                      hc_xAxis(title=list(text='Period'))%>%
+                      hc_add_theme(thm) %>%
+                      hc_colors(ResultsBRT_ART()$PlotColors$Color)
+} else {
+  
+  Available <- ResultsBRT_ART()$ResultsBRT_ART[BusinessLine!="Repline Aggregate" & Scenario==input$ScenarioSummary,
+                                               .(BusinessLine = paste(BusinessLine,'- A'), CT1_AMT = CT1_AMT_avail, T1_Capital = T1_Capital,  DateYQ = DateYQ)]
+  Targeted  <- ResultsBRT_ART()$ResultsBRT_ART[BusinessLine!="Repline Aggregate" & Scenario==input$ScenarioSummary,
+                                               .(BusinessLine = paste(BusinessLine,'- T'), CT1_AMT = .118 * RWA,T1_Capital = .047 * T1_Capital/LeverageRatio,DateYQ = DateYQ)]
+  
+  Total     <- rbind(Available, Targeted)
+  
+  #Add darker colors for required numbers
+  DarkerColors   <- c('#cac291', '#db006a','#0477b9','#ad0000','#155615','#c29800','#47008a')
+  #alternate light/dark colors
+  LightDarkColors <- rep(c(rbind(lineColors[-1], DarkerColors)), length.out = length(unique(Total$BusinessLine))) 
+
+    
+  LeveragePlot <- hchart(Total, "line", hcaes(x = DateYQ, y = round(T1_Capital,2), group = BusinessLine))%>%
+                              hc_yAxis(title=list(text='T1'),labels=list(format = '{value} MM'), min = 0) %>%
+                              hc_xAxis(title=list(text='Period'))%>%
+                              hc_add_theme(thm) %>%
+                              hc_colors(LightDarkColors)
+ CapitalPlot  <- hchart(Total, "line", hcaes(x = DateYQ, y = round(CT1_AMT,2), group = BusinessLine))%>%
+                      hc_yAxis(title=list(text='CET1'),labels=list(format = '{value} MM'), min = 0) %>%
+                      hc_xAxis(title=list(text='Period'))%>%
+                      hc_add_theme(thm) %>%
+                      hc_colors(LightDarkColors)
+}
+ return(list(LeveragePlot = LeveragePlot, CapitalPlot = CapitalPlot))
+})
+
+```
+
+
+```{r}
+renderHighchart({
+  AbsolutevsRelativePlotting()$CapitalPlot
+})
+
+```
+
+### <span style="color:`r borderTextColor`">`r renderText(return(if(input$RelativeorAbsolute=='Relative'){'Leverage Ratio'} else{'Tier 1 Capital (A = Available, T = Targeted)'}))`</span>
+
+```{r}
+renderHighchart({
+  AbsolutevsRelativePlotting()$LeveragePlot
+})
+
+```

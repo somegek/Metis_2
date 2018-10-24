@@ -1,0 +1,367 @@
+Bank History US{data-icon="fa-search"}
+=====================================
+
+```{r}
+
+###################################################################
+#### This chunk contains the CRE_Hist on the Bank Data Overview page
+#### First we create conditional CRE_Hist with renderUI
+#### Second we create the logic for the select all/unselect all buttons
+#### Third, we create logic for the measure selection, which has to be dependent on each other
+####    it consists of multiple menus but they should only allow one item to be selected across all menus
+#### Fourth we render everything in a navbar
+####################################################################
+
+load(paste0(workingDirectory, "/HistoricalDataEBA/FDIC_DT.Rdata"))
+
+#### First we create conditional DT with renderUI
+myVector <- c('BorrowerBaselIIISegment','BankName','BankNameShort','BankNameCode','DateYQ','Continent','Country','ExposureClass','ExposureLabel','Portfolio','LEI_Code','T1CommonEquityCapital','T1Capital','TotalCapital','TotalCapitalRatio','T1CapitalRatio_IRBA','T1CommonEquityCapital_IRBA','T1LeverageRatio','RWA_TOTAL','RWA_TOTAL_IRBA','NonInterestIncome','TradingIncome','CompensationExpense','FixedAssetsExpense','NetIncome','PL_AT','PL_BT','TotalProvisions','GII','IntExp','NII','NonIntExp','ChargeOffs','Delinq30','Delinq30Rate','Delinq90','Delinq90Rate','Delinqnonaccr','DelinqnonaccrRate','NCO','NCORate','Exposure','TotalDelinquencies','TotalDelinquencyRate',"Pre Provision Net Revenue","Recoveries")
+
+DT<-data.table(DT [, ..myVector])
+
+#Rename Columns
+names(DT) <-c('BorrowerBaselIIISegment','BankName','BankNameShort','BankNameCode','DateYQ','Continent','Country','ExposureClass','ExposureLabel','Portfolio','LEI_Code','Common Equity Tier 1 Capital','Tier 1 Capital','Total Capital','Total Capital Ratio','T1 Capital Ratio','Common Equity Tier 1 Ratio','T1 Leverage Ratio','RWA TOTAL','RWA TOTAL IRB','Non Interest Income','Trading Income','Compensation Expense','Fixed Assets Expense','Net Income','Profit or  (-) Loss After Tax','Profit or (-) Loss Before Tax','Total Provisions','Total Interest income','Interest Expense','Net Interest Income', 'Non Interest Expense', 'Total Charge-Offs','Past Due 30-89 Days and Still Accruing','Delinquency Rate 30-89 Days and Still Accruing','Past Due 90 Days or More and Still Accruing','Delinquency Rate 90 Days or More and Still Accruing','Nonaccrual','Nonaccrual Rate','Net Charge-Offs','Net Charge-Off Rate','Exposure','Total Delinquencies','Total Delinquency Rate','Pre Provision Net Revenue',"Recoveries")
+
+#Convert to MM
+myVector<-c('Total Charge-Offs','Past Due 30-89 Days and Still Accruing','Past Due 90 Days or More and Still Accruing','Nonaccrual','Net Charge-Offs','Exposure','Total Delinquencies','Recoveries')
+DT[, myVector] <-DT [, ..myVector]/1000
+
+#Remove OtherRetail as Exposure Class
+DT<-DT[BorrowerBaselIIISegment!= "OtherRetail",]
+
+output$ExposureTypeFilterSettingUSHistUS1UI <- renderUI({
+  checkboxGroupButtons(inputId = "ExposureTypeFilterSettingUSHist1", 
+    label = "Corporates", choices = unique(DT[ExposureClass=='Corporates' & BankNameShort %in% input$bankFilterSettingUSHist , ExposureLabel]), individual = TRUE, 
+    checkIcon = checkIconList)
+})
+
+output$ExposureTypeFilterSettingUSHistUS2UI <- renderUI({
+  checkboxGroupButtons(inputId = "ExposureTypeFilterSettingUSHist2", 
+    label = "Retail", choices = unique(DT[ExposureClass=='Retail' & BankNameShort %in% input$bankFilterSettingUSHist , ExposureLabel]), selected = 'RetailMortgages',individual = TRUE, 
+    checkIcon = checkIconList)
+})
+
+#### Second we create the logic for the select all/unselect all buttons
+
+# for later reference in this second part, but also third part
+checkIconList <- list(yes = tags$i(class = "fa fa-circle", 
+                      style = "color: steelblue"), 
+                      no = tags$i(class = "fa fa-circle-o", 
+                      style = "color: steelblue"))
+
+# Bank dropdown
+observeEvent(input$selectAllBanks_US, {
+      shinyWidgets::updateCheckboxGroupButtons(session, "bankFilterSettingUSHist", "Bank Setting", choices=unique(DT$BankNameShort), selected=unique(DT$BankNameShort), checkIcon = checkIconList)
+})
+observeEvent(input$deselectAllBanks_US, {
+      shinyWidgets::updateCheckboxGroupButtons(session, "bankFilterSettingUSHist", "Bank Setting", choices=unique(DT$BankNameShort), selected=NULL, checkIcon = checkIconList)
+})
+# Country dropdown
+
+# Sector dropdown
+# corporates
+observeEvent(input$selectAllCorporates, {
+      shinyWidgets::updateCheckboxGroupButtons(session, "ExposureTypeFilterSettingUSHist1", "Corporates", choices=setdiff(unique(DT[BankNameShort %in% input$bankFilterSettingUSHist, ExposureLabel])[!grepl(c('Retail'), unique(DT[BankNameShort %in% input$bankFilterSettingUSHist, ExposureLabel]))], 'Corporates'), selected=setdiff(unique(DT[BankNameShort %in% input$bankFilterSettingUSHist, ExposureLabel])[!grepl(c('Retail'), unique(DT[BankNameShort %in% input$bankFilterSettingUSHist, ExposureLabel]))], 'Corporates'), checkIcon = checkIconList)
+})
+observeEvent(input$deselectAllCorporates, {
+      shinyWidgets::updateCheckboxGroupButtons(session, "ExposureTypeFilterSettingUSHist1", "Corporates", choices=setdiff(unique(DT[BankNameShort %in% input$bankFilterSettingUSHist , ExposureLabel])[!grepl(c('Retail'), unique(DT[BankNameShort %in% input$bankFilterSettingUSHist , ExposureLabel]))], 'Corporates'), selected=NULL, checkIcon = checkIconList)
+})
+# retail
+observeEvent(input$selectAllRetail, {
+      shinyWidgets::updateCheckboxGroupButtons(session, "ExposureTypeFilterSettingUSHist2", "Corporates", choices=setdiff(unique(DT[BankNameShort %in% input$bankFilterSettingUSHist , ExposureLabel])[grepl('Retail', unique(DT[BankNameShort %in% input$bankFilterSettingUSHist , ExposureLabel]))], 'Retail'), selected=setdiff(unique(DT[BankNameShort %in% input$bankFilterSettingUSHist , ExposureLabel])[grepl('Retail', unique(DT[BankNameShort %in% input$bankFilterSettingUSHist , ExposureLabel]))], 'Retail'), checkIcon = checkIconList)
+})
+observeEvent(input$deselectAllRetail, {
+      shinyWidgets::updateCheckboxGroupButtons(session, "ExposureTypeFilterSettingUSHist2", "Retail", choices=setdiff(unique(DT[BankNameShort %in% input$bankFilterSettingUSHist , ExposureLabel])[grepl('Retail', unique(DT[BankNameShort %in% input$bankFilterSettingUSHist , ExposureLabel]))], 'Retail'), selected=NULL, checkIcon = checkIconList)
+})
+
+#### Fourth we render everything in a navbar
+
+shinyUI(
+  fluidPage(
+    navbarPage("",
+               tabPanel(
+                 div(style="display: inline-block; align: center;",
+                     shinyWidgets::dropdown(label='Bank', status = "primary",
+    fluidRow(
+       column(10,offset=0,
+          div(style = "padding: 0px 0px; margin-left:0.1%",
+checkboxGroupButtons(inputId = "bankFilterSettingUSHist", 
+  label = "Bank Setting", choices = unique(DT$BankNameShort), selected = unique(DT$BankNameShort),individual = TRUE, 
+  checkIcon = checkIconList),
+br(),
+actionButton("selectAllBanks_US", "Select All"),
+actionButton("deselectAllBanks_US", "Deselect All")
+  ))))
+  ,
+    circle = F, status = "primary",
+    icon = icon("time"), width = "300px",
+    tooltip = tooltipOptions(title = "Click to modify CRE_Hist")
+)),
+  tabPanel(div(style="display: inline-block;",shinyWidgets::dropdown(label = 'Exposure',
+    fluidRow(
+        column(4,offset=0,
+       div(style="display: inline-block; align: center;",
+                     uiOutput('ExposureTypeFilterSettingUSHistUS1UI'),
+           br()
+           #,
+           # actionButton("selectAllCorporates", "Select All"),
+           # actionButton("deselectAllCorporates", "Deselect All")
+       ))
+       ,
+    
+      column(4,offset=0,
+       div(style = "padding: 0px 0px; margin-left:0.1%",
+          uiOutput('ExposureTypeFilterSettingUSHistUS2UI'),
+           br()
+          # ,
+          #  actionButton("selectAllRetail", "Select All"),
+          #  actionButton("deselectAllRetail", "Deselect All")
+       ))
+  )
+  ,
+    circle = F, status = "primary", width = "450px",
+    tooltip = tooltipOptions(title = "Click to modify CRE_Hist")
+  ))),
+
+  # tabPanel(
+  #                div(style="display: inline-block; align: center;",shinyWidgets::dropdown(label='Portfolio',
+  #   fluidRow(
+  #      column(10,offset=0,
+  #         div(style = "",
+  #             tags$h4(""),
+  #             br(),
+  #             selectInput(inputId = 'approach_RWAHist', label = 'Approach', choices=c("IRB","SA"), selected = "IRB")
+  #         ))
+  # ),
+  #   circle = F, status = "primary",
+  #   icon = icon("formula"), width = "300px",
+  #   tooltip = tooltipOptions(title = "Click to modify CRE_Hist")
+  # ))),
+tabPanel(
+                   div(style="display: inline-block; align: center;",
+                       shinyWidgets::dropdown(label='Portfolio Level', status = "primary",
+      fluidRow(
+         column(10,offset=0,
+            div(style = "padding: 0px 0px; margin-left:0.1%",
+  radioGroupButtons(inputId = "BreakDownMeasureFilterSettingUSHist", 
+    label = "Breakdown Measures Setting", choices = c('Past Due 30-89 Days and Still Accruing','Delinquency Rate 30-89 Days and Still Accruing','Past Due 90 Days or More and Still Accruing','Delinquency Rate 90 Days or More and Still Accruing','Nonaccrual','Nonaccrual Rate','Total Delinquencies','Total Delinquency Rate','Total Charge-Offs','Net Charge-Offs','Net Charge-Off Rate','Recoveries','Exposure'), selected = 'Net Charge-Offs',
+    checkIcon = list(yes = tags$i(class = "fa fa-circle", 
+      style = "color: steelblue"), 
+      no = tags$i(class = "fa fa-circle-o", 
+        style = "color: steelblue")))
+    ))))
+    ,
+      circle = F, status = "primary",
+      icon = icon("time"), width = "300px",
+      tooltip = tooltipOptions(title = "Click to modify inputs")
+  )) ,tabPanel(
+                   div(style="display: inline-block; align: center;",
+                       shinyWidgets::dropdown(label='Bank Level', status = "primary",
+      fluidRow(
+         column(10,offset=0,
+            div(style = "padding: 0px 0px; margin-left:0.1%",
+  radioGroupButtons(inputId = "BankLevelFilterSettingUSHist", 
+    label = "Bank Level Measure Setting", choices = c('Common Equity Tier 1 Capital','Tier 1 Capital','Total Capital','Total Capital Ratio','T1 Capital Ratio','Common Equity Tier 1 Ratio','T1 Leverage Ratio','RWA TOTAL','RWA TOTAL IRB','Non Interest Income','Trading Income','Compensation Expense','Fixed Assets Expense','Net Income','Profit or  (-) Loss After Tax','Profit or (-) Loss Before Tax','Total Provisions','Total Interest income','Interest Expense','Net Interest Income', 'Non Interest Expense','Pre Provision Net Revenue'), selected = 'Pre Provision Net Revenue',
+    checkIcon = list(yes = tags$i(class = "fa fa-circle", 
+      style = "color: steelblue"), 
+      no = tags$i(class = "fa fa-circle-o", 
+        style = "color: steelblue")))
+    ))))
+    ,
+      circle = F, status = "primary",
+      icon = icon("time"), width = "300px",
+      tooltip = tooltipOptions(title = "Click to modify inputs")
+  )) 
+)
+, 
+HTML("<script>var parent = document.getElementsByClassName('navbar-nav');
+parent[0].insertAdjacentHTML( 'afterend', '<ul class=\"nav navbar-nav navbar-right\"><li class=\"disabled\"><a href=\"#\">v0.1</a></li></ul>' );</script>")
+    ))
+
+```
+
+```{r, include = FALSE}
+outputOptions(x = output, name = "ExposureTypeFilterSettingUSHistUS1UI", suspendWhenHidden = FALSE)
+outputOptions(x = output, name = "ExposureTypeFilterSettingUSHistUS2UI", suspendWhenHidden = FALSE)
+#output$res <- renderPrint({
+#    reactiveValuesToList(input$filterBaselSegment)
+#  })
+```
+
+Row {data-height=80}
+-------------------------------------
+  
+### <span style="color:`r valueBoxTextColor`"></span>
+
+```{r}
+renderValueBox({
+  valueBox(tags$p('Country Selection: US', style = "font-size: 40%;"))
+})
+```
+
+### <span style="color:`r valueBoxTextColor`"></span>
+
+```{r}
+renderValueBox({
+  valueBox(tags$p(paste0('Bank Selection: ', paste(ifelse(input$bankFilterSettingUSHist=="CITIGROUP INC.","CITI",
+                                                          ifelse(input$bankFilterSettingUSHist=="BANK OF AMERICA CORPORATION","BOA",
+                                                                 ifelse(input$bankFilterSettingUSHist=="CAPITAL ONE FINANCIAL CORPORATION","COF",
+                                                                        ifelse(input$bankFilterSettingUSHist=="JPMORGAN CHASE & CO.","JPMC",
+                                                                               ifelse(input$bankFilterSettingUSHist=="KEYCORP","KEY",
+                                                                                      ifelse(input$bankFilterSettingUSHist=="M&T BANK CORPORATION","MTB",
+                                                                                             ifelse(input$bankFilterSettingUSHist=="PNC FINANCIAL SERVICES GROUP, INC., THE","PNC",
+                                                                                                    ifelse(input$bankFilterSettingUSHist=="REGIONS FINANCIAL CORPORATION","RF",
+                                                                                                           ifelse(input$bankFilterSettingUSHist=="STATE STREET CORPORATION","STT",
+                                                                                                                  ifelse(input$bankFilterSettingUSHist=="WELLS FARGO & COMPANY","WFC",input$bankFilterSettingUSHist)))))))))), collapse = " ")), style = "font-size: 40%;"))
+  #valueBox(tags$p(paste0('WA LGD: ', round(dataValueBoxes()$weightedAverageLGD, 4)), style = "font-size: 50%;"), color = valueBoxColor)
+})
+```
+
+<!--###### <span style="color:`r valueBoxTextColor`"></span>
+
+```{r}
+renderValueBox({
+  valueBox(tags$p(paste0('Approach: ', paste(input$approach_RWAHist, collapse = " ")), style = "font-size: 40%;"))
+})
+```
+-->
+### <span style="color:`r valueBoxTextColor`"></span>
+
+```{r}
+renderValueBox({
+  valueBox(tags$p('Source Call Reports: FRY-9C', style = "font-size: 40%;"))
+})
+```
+
+Row {data-height=1000}
+-------------------------------------
+
+### <span style="color:`r borderTextColor`">`r renderText(return(paste('Portfolio Level:', ifelse(input$BreakDownMeasureFilterSettingUSHist=='Delinquency Rate 30-89 Days and Still Accruing','Delinquency Rate 30-89 Days and Still Accruing = Past Due 30-89 Days and Still Accruing / Loan Exposure ',ifelse(input$BreakDownMeasureFilterSettingUSHist=='Delinquency Rate 90 Days or More and Still Accruing','Delinquency Rate 90 Days or More and Still Accruing = Past Due 90+ Days and Still Accruing / Loan Exposure',ifelse(input$BreakDownMeasureFilterSettingUSHist=='Nonaccrual Rate','Nonaccrual Rate = Nonaccrual Loans / Loan Exposure ',ifelse(input$BreakDownMeasureFilterSettingUSHist=='Net Charge-Offs','Net Charge-Offs = Charge-Offs - Recoveries',ifelse(input$BreakDownMeasureFilterSettingUSHist=='Net Charge-Off Rate','Net Charge-Off Rate = (Charge-Offs - Recoveries) / Loan Exposure',ifelse(input$BreakDownMeasureFilterSettingUSHist=='Total Delinquency Rate','Total Delinquency Rate = Total Delinquency / Loan Exposure',input$BreakDownMeasureFilterSettingUSHist)))))))))`</span>
+```{r}
+CRE_ItemSelect_US <- reactive({
+input$renewValue
+CRE_temp <- CRE_SubSelect_US()$CRE_HistSub 
+CRE_temp[, Selected := get(input$BreakDownMeasureFilterSettingUSHist)]
+# 
+# HTYColors <- c('#0067B1', '#1185d8', '#3fa3ea', '#2bc1ef', '#0aa4d3',
+#                '#000e78', '#1529c4', '#4b5bd8', '#606dd6', '#5c20bc',
+#                '#04b8f9', '#209ecc', '#91e3f2', '#c1ecf4', '#97d1e5', 
+#                '#77797C', '#e3e9f2', '#75777a', '#eff0f2', '#4d4e51',  
+#                '#CC0000','#d15e5e', '#630101', '#e5405b', '#ea9da9',  
+#                '#06993E', '#3ad876', '#134727', '#1fe069', '#9fddb7',  
+#                '#FF5400', '#e59544', '#e5b98b', '#e87c0b', '#e58129',  
+#                '#88BD40','#9de837', '#5fa008', '#c9e8a0', '#b2ea23',  
+#                '#0800FF','#00008B', '#0000FF', '#4682B4', '#00BFFF',  
+#                '#FFFF00','#f2ff00', '#FFFFE0', '#FFE4B5', '#FFE4B5')
+
+
+SelectedplotUS <- hchart(CRE_temp[!is.na(Selected) & is.finite(Selected) & Selected!=0], "line", 
+                       hcaes(x = DateYQ, y = round(Selected,2), group = Repline))%>% 
+  hc_yAxis(title=list(text=input$BreakDownMeasureFilterSettingUSHist),
+           labels=list(format = ifelse(input$BreakDownMeasureFilterSettingUSHist %in% c('Delinquency Rate 30-89 Days and Still Accruing','Delinquency Rate 90 Days or More and Still Accruing','Nonaccrual Rate','Net Charge-Off Rate','Total Delinquency Rate'), '{value}%', '{value}MM')))%>% 
+  hc_xAxis(title=list(text='Period'))%>%
+  hc_add_theme(thm)%>%
+  hc_colors(CRE_temp[!is.na(Selected) & is.finite(Selected) & Selected!=0, unique(ReplineColor), by = Repline]$V1) 
+  #hc_colors(HTYColors)
+
+
+return(list(SelectedplotUS = SelectedplotUS))
+})
+
+renderHighchart({
+  input$renewValue
+  CRE_ItemSelect_US()$SelectedplotUS
+})
+  
+```
+
+### <span style="color:`r borderTextColor`">`r renderText(return(paste('Bank Level Capital/P&L:', ifelse(input$BankLevelFilterSettingUSHist=='Pre Provision Net Revenue','Pre Provision Net Revenue = Net Interest Income + Non Interest Income - Non Interest Expense',input$BankLevelFilterSettingUSHist))))`</span>
+```{r}
+PnL_Plot_US <- reactive({
+DT[, DateYQ := as.yearqtr(DateYQ)]
+myVector<-c('Common Equity Tier 1 Capital','Tier 1 Capital','Total Capital','RWA TOTAL','RWA TOTAL IRB','Non Interest Income','Trading Income','Compensation Expense','Fixed Assets Expense','Net Income','Profit or  (-) Loss After Tax','Profit or (-) Loss Before Tax','Total Provisions','Total Interest income','Interest Expense','Net Interest Income', 'Non Interest Expense','Pre Provision Net Revenue')
+
+DT[, myVector] <-DT [, ..myVector]/1000
+# DT[BankNameShort=="CITIGROUP INC.",ColorBaseBase:='#04b8f9'] #LIGHTBLUE
+# DT[BankNameShort=="BANK OF AMERICA CORPORATION",ColorBaseBase:='#0067B1'] # LIGHTERBLUE
+# DT[BankNameShort=="CAPITAL ONE FINANCIAL CORPORATION",ColorBase:='#004879'] #004879 # LIGHTBLUE
+# DT[BankNameShort=="JPMORGAN CHASE & CO.",ColorBase:='#77797C']#GRAY
+# DT[BankNameShort=="KEYCORP",ColorBase:='#CC0000']# RED
+# DT[BankNameShort=="M&T BANK CORPORATION",ColorBase:='#06993E'] # GREEN
+# DT[BankNameShort=="PNC FINANCIAL SERVICES GROUP, INC.",ColorBase:='#FF5400']#ORANGE
+# DT[BankNameShort=="REGIONS FINANCIAL CORPORATION",ColorBase:='#88BD40']#LIGHTGREEN
+# DT[BankNameShort=="STATE STREET CORPORATION",ColorBase:='#0800FF']#DARKBLUE
+# DT[BankNameShort=="WELLS FARGO & COMPANY",ColorBase:='#FFFF00']#YELLOW
+
+CAPL_HistSub <- DT[BankNameShort %in% input$bankFilterSettingUSHist,]
+CAPL_HistSub <- CAPL_HistSub[order(CAPL_HistSub$DateYQ),]
+CAPL_HistSub[, Selected := get(input$BankLevelFilterSettingUSHist)]
+
+#add basic coloring
+library(RColorBrewer)
+BasicColorMaping <- data.table(BankNameShort = c("CITIGROUP INC.", "BANK OF AMERICA CORPORATION", "CAPITAL ONE FINANCIAL CORPORATION", "JPMORGAN CHASE & CO.", "KEYCORP", 
+                                              "M&T BANK CORPORATION","PNC FINANCIAL SERVICES GROUP, INC., THE","REGIONS FINANCIAL CORPORATION","STATE STREET CORPORATION","WELLS FARGO & COMPANY"),
+                            ColorBased = c(brewer.pal(9,'Blues')[5],brewer.pal(9,'Reds')[7],brewer.pal(9,'PuBu')[7],
+                                          brewer.pal(9,'Greys')[5],brewer.pal(9,'RdPu')[7],brewer.pal(9,'Greens')[7],
+                                          brewer.pal(9,'Oranges')[7],brewer.pal(9,'YlGn')[4],brewer.pal(9,'Purples')[7],brewer.pal(9,'YlOrBr')[3]))
+ 
+CAPL_HistSub <- merge(CAPL_HistSub, BasicColorMaping, by = 'BankNameShort')
+
+#HTYColors <- c('#0067B1', '#000e78', '#04b8f9', '#77797C', '#CC0000', '#06993E', '#FF5400', '#88BD40','#0800FF','#FFFF00')
+
+#browser()
+BankLevplot <-  hchart(CAPL_HistSub[!is.na(Selected) & is.finite(Selected) & Selected!=0], "line",
+                              hcaes(x = DateYQ, y = round(Selected,2), group = BankNameShort))%>%
+  hc_yAxis(title=list(text=input$BankLevelFilterSettingUSHist),
+           labels=list(format = ifelse(input$BankLevelFilterSettingUSHist %in% c('Total Capital Ratio','T1 Capital Ratio','Common Equity Tier 1 Ratio','T1 Leverage Ratio'),'{value}%','{value}MM')))%>%
+  hc_xAxis(tickInterval=.5)%>%
+  hc_add_theme(thm)%>%
+  hc_colors(CAPL_HistSub[!is.na(Selected) & is.finite(Selected) & Selected!=0, unique(ColorBased), by = BankNameShort]$V1) 
+  #hc_colors(HTYColors)
+
+return(list(BankLevplot = BankLevplot))
+})
+
+renderHighchart({
+  input$renewValue
+  PnL_Plot_US()$BankLevplot
+})
+
+```
+
+<!--### <span style="color:`r borderTextColor`">Pre Provision Net Revenue</span>-->
+
+```{r}
+CRE_SubSelect_US <- reactive({
+
+input$renewValue
+
+# combine all sector filter settings
+ExposureTypeFilterSettingUSHist <- as.vector(c(input$ExposureTypeFilterSettingUSHist1, input$ExposureTypeFilterSettingUSHist2))
+#Subselect historic credit risk data
+CRE_HistSub <- DT[ExposureLabel %in% ExposureTypeFilterSettingUSHist & 
+                          BankNameShort %in% input$bankFilterSettingUSHist , ]
+CRE_HistSub[, Repline:= paste(BankNameShort,ExposureLabel)]
+setkey(CRE_HistSub, BankNameShort, DateYQ)
+#add basic coloring
+
+library(RColorBrewer)
+BasicColorMaping <- data.table(BankNameShort = c("CITIGROUP INC.", "BANK OF AMERICA CORPORATION", "CAPITAL ONE FINANCIAL CORPORATION", "JPMORGAN CHASE & CO.", "KEYCORP", 
+                                              "M&T BANK CORPORATION","PNC FINANCIAL SERVICES GROUP, INC., THE","REGIONS FINANCIAL CORPORATION","STATE STREET CORPORATION","WELLS FARGO & COMPANY"),
+                            ColorBased = c('Blues','Reds','PuBu','Greys','RdPu','Greens','Oranges','YlGn','Purples','YlOrBr'))
+
+CRE_HistSub <- merge(CRE_HistSub, BasicColorMaping, by = 'BankNameShort')
+#browser()
+
+MapReplineColors <-unique(CRE_HistSub[,.(ColorBased,Repline)])
+MapReplineColors[, ReplineColor := ColorPaletteGenerate(ColorBased, length(unique(Repline))),  by = ColorBased]
+CRE_HistSub <- merge(CRE_HistSub, MapReplineColors[,.(Repline, ReplineColor)], by = 'Repline')
+
+#Subselect scenario credit risk data
+ST_CRE16Sub <- ST_CRE16[ExposureLabel %in% ExposureTypeFilterSettingUSHist & 
+                          BankNameShort %in% input$bankFilterSettingUSHist , ]
+ST_CRE16Sub[, Repline := paste(BankNameShort,ExposureLabel,Scenario)]
+setkey(ST_CRE16Sub, BankNameShort, DateYQ)
+return(list(CRE_HistSub = CRE_HistSub, ST_CRE16Sub = ST_CRE16Sub))
+})
+```

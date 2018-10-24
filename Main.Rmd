@@ -1,0 +1,597 @@
+---
+title: "Demo Version v0.8"
+resource_files:
+- styles.css
+- RData
+- HistoricalDataEBA
+- MigrationMatrices
+- Macrodata
+- subModules
+- MappingTables
+runtime: shiny
+output:
+  flexdashboard::flex_dashboard:
+    css: styles.css
+    orientation: rows
+    vertical_layout: fill
+---
+
+
+<!-- Loading of libraries -->
+```{r libraries, include=FALSE}
+library('shinyWidgets')
+library('shinycssloaders')
+library('data.table')
+library('rprojroot')
+library('fanplot')
+library('OSISToolbox')
+library('tidyr')
+library('knitr')
+library('highcharter')
+library('shinydashboard')
+library('DT')
+library('RColorBrewer')
+library('magrittr')
+library('glue')
+library('dplyr')
+library('plyr')
+library('shiny')
+library('beepr')
+library('shinyLP')
+library('shinythemes')
+library('shinyBS')
+library('plotly')
+library('flexdashboard')
+library('purrr')
+library('webshot')
+library('gsubfn') 
+library('zoo')
+library('jsonlite')
+library('maptools')
+library('ggplot2')
+library('leaflet')
+library('forecast')
+library('kableExtra')
+library('formattable')
+library('xlsx')
+library('FSA')
+library('xtable')
+library('stringr')
+library('scales')
+library('webshot')
+library('htmltools')
+library('htmlwidgets')
+library('gtable')
+library('rhandsontable')
+library('lubridate')
+library('DescTools')
+library('lubridate')
+library('binhf')
+library('FinCal')
+library('devtools')
+library('readr')
+library('plyr')
+library('tidyr')
+library('OSISAnalytics')
+```
+
+```{r}
+source('./subModules/runCPMcalculations.R')
+```
+
+```{r}
+source('./subModules/runCPMcalculations_US.R')
+```
+
+```{r}
+# source functions
+source('./RCode/ColorPaletteGeneration.R')
+```
+
+```{r, include = FALSE}
+workingDirectory <- getwd()
+#inputDataPath <- '~/Dropbox (OSIS)/142 Metis/InputData/InputFinal/'
+#load(paste0(inputDataPath,"Inputs.RData"))
+macroDataTable <- get(load("Macrodata/macroData.RData"))
+
+inputs <- get(load("RData/firstSnapshot.RData"))
+# unmodified data, copy so there is no reference between inputsOriginal and inputs
+# used in visualisation of original data
+inputsOriginal <- get(load("RData/firstSnapshot.RData"))
+
+
+measuresToChange <- c( "CCF", 'CT1 Credit' = "CT1_Credit" , 'Current Interest Rate' = "currentinterestrate", "Default", 
+                       "Dividend", 'Downturn LGD' = "downturnlgd", 'LGD' = "lgd",  'Maturity (Numeric)' = "Maturity_numeric", 'FTP Rate' = "FTP_Rate", 
+                       'Cost Income Ratio' = "CostIncomeRatio", 'Tax Rate' = "TaxRate", 'CLTV', 'New CLTV' = 'New_CLTV',
+                       'New Debt Fund Upfront Fee' = "New_DebtFundUpfrontFee", 'New Syndication Upfront Fee' = "New_SyndUpfrontFee",
+                       'New CCF' = "New_CCF", 'New Downturn LGD' = "New_downturnlgd", 'New Exposure Growth Rate' = "New_ExposureGrowthRate", 
+                       'New Fee' = "New_fee", 'New LGD' = "New_lgd", 'New Default' = "New_Default", 'New Maturity (Numeric)' = "New_Maturity_numeric", 'New Rate' = "New_rate",
+                       'RWA Credit' = "RWA_Credit", 'New FTP Rate' = "New_FTP_Rate", 'SF CF Perc' = "SF_CF_Perc", 'SF CRE Perc' = "SF_CRE_Perc",
+                       'SF OF Perc' = "SF_OF_Perc", 'SF PF Perc' = "SF_PF_Perc" )
+load('./MappingTables/CountryCodeMapping.RData')
+countries <- as.data.table(unique(inputs$Country))
+colnames(countries) <- 'Country'
+countriesShortCodeContinent <- merge(countries, CountryCodeMapping, all.x = T, by = 'Country')
+rm(CountryCodeMapping)
+```
+
+```{r}
+#historical data sets
+load('./HistoricalDataEBA/CRE_Hist.RData') 
+load('./HistoricalDataEBA/ST_CRE16.RData')
+load('./HistoricalDataEBA/CAPL_Hist.RData')
+```
+
+```{r}
+
+migrationMatrixSelected <- reactive({
+
+  selectedMatrix <- NULL
+  
+if (input$selectionMigrationMatrix == 'Corporates and CRE Class'){
+  #### Sector 1/Moodys, Corporates and CRE
+  sector1Matrix <- fread("MigrationMatrices/MD_corp_migration_global_Qtr.csv")
+  sector1Matrix <- sector1Matrix/rowSums(sector1Matrix)
+  selectedMatrix <- sector1Matrix
+}
+ 
+if (input$selectionMigrationMatrix == 'SME and Residential Class'){
+  ### Sector 2, SME and Residential 
+  TM <- get(load("MigrationMatrices/Q_TM_SME_NL.RData"))
+  TM <- TM[,-1]
+  TM <- TM[,-ncol(TM),with=F]
+  TM <- cbind(TM,data.table('9'=1-rowSums(TM)))
+  names(TM) <- gsub("Rating9","Default",paste0('Rating',names(TM)))
+  defaultRow <- transpose(data.table(c(rep(0,nrow(TM)),1)))
+  names(defaultRow) <- names(TM)
+  TM <- rbind(TM, defaultRow)
+  selectedMatrix <- TM
+}  
+  
+return(list(selectedMatrix = selectedMatrix))
+
+})
+
+# for later reference, number of digits after decimals
+roundDigitsMigrationMatrix <- 4 
+
+# ECL in Balance Sheet Projections
+mappingTableProbScen <- fread("MappingTables/mappingProbScen.csv")
+```
+
+```{r coloring, include=FALSE}
+
+backgroundcolorFigures <- 'rgba(19, 35, 50, 0.8)' #'rgba(150, 150, 150, 0.5)'
+backgroundcolorTables <- 'rgb(19, 35, 50)'
+bodyTextColor <- 'black'
+borderTextColor <- 'white'
+tableHeaderColor <- 'white'
+tableTextColor <- 'white'
+linewidthFigures <- 3.5
+# line colors of figures
+lineColor <- 'Blues'
+osisBlueColor <- '#0EA2FA'
+# lineColors <- brewer.pal(9, lineColor)
+lineColors <- c('#FFFFFF', '#F1EFE2', '#FF6EB4', '#0EA2FA', '#FF0000', '#228B22', '#FFDC1A', '#7A00ED')
+sidebarTextColor <- 'white'
+vintageColor <- c(rev(scales::brewer_pal(palette = "Blues")(9)),rev(scales::brewer_pal(palette = "Greens")(9)))
+valueBoxColor <- 'rgba(38, 70, 99, 0.5)'
+valueBoxTextColor <- 'white'
+
+
+# highchart theme 
+thm <- hc_theme(
+  title = list(
+    style = list(
+      color = 'white'
+    )
+  ),
+  subtitle = list(
+    style = list(
+      color = 'white'
+    )
+  ),
+  legend = list(
+    itemStyle = list(
+      color = 'white'
+    ),
+    itemHoverStyle = list(
+      color = 'white'
+    )   
+  ),
+  chart = list(
+    backgroundColor = backgroundcolorFigures,
+    labels = list(
+      style = list(
+        color = "white"
+      )
+    )
+  ),
+  xAxis = list(
+    
+    labels = list(
+      style = list(
+        color = "white",
+        fontSize="14px"
+      )
+    ),
+    title = list(
+      style = list(
+        color = backgroundcolorFigures
+      )
+    )
+  ),
+  yAxis = list(
+    labels = list(
+      style = list(
+        color = "white",
+        fontSize="14px"
+      )
+    ),
+    title = list(
+      style = list(
+        color = backgroundcolorFigures
+      )
+    )
+  )    
+)
+    
+```
+
+```{r}
+#load the data for the fan charts and credit model page
+#load("Macrodata/macroData.RData")
+load("Macrodata/MacroFanCharts.RData")
+
+```
+
+Sidebar {.sidebar data-width=220}
+=====================================
+
+<div class="grid-container">
+<div>
+
+```{r}
+
+output$replineSelectionSidebarCountry <- renderUI({
+  input$bankDataSelectedSidebar
+  selectCountry <- "All Countries"
+  
+  if(input$runBalanceSheetProjection != 0 ){
+    selectCountry <- intersect(unique(newresults()$Country), 
+                               unique(results()$Country))
+  }
+    
+  choicesUserFriendlyCountries <- as.list(c("0", setdiff(unique(results()$Country), '0')))
+  names(choicesUserFriendlyCountries) <- c('All Countries', setdiff(unique(results()$Country), '0'))
+ 
+  if(grepl(("ING|ABN|AMRO|Banco|Santander|Barclays|Pfandbriefbank|Rabobank"),input$bankDataSelectedSidebar)){
+ 
+  pickerInput(inputId = "countryDataSelectedSidebar", label = "", 
+              choices = choicesUserFriendlyCountries, selected =  '0', 
+              #choices = choicesUserFriendlyCountries, selected choicesUserFriendlyCountries[1], 
+              width = '180px', multiple = TRUE)
+  }else{
+  
+   pickerInput(inputId = "countryDataSelectedSidebar", label = "", 
+              #choices = choicesUserFriendlyCountries, selected =  '0', 
+              choices = choicesUserFriendlyCountries, selected = choicesUserFriendlyCountries[2], 
+              width = '180px', multiple = TRUE)
+  }
+   
+})
+
+output$replineSelectionSidebarPortfolio <- renderUI({
+  resultsFiltered <- results()[Country %in% input$countryDataSelectedSidebar, ]
+   selectPortf <- grep("IRB", unique(resultsFiltered$PortfolioLabel), value = T)
+  
+  if(input$runBalanceSheetProjection != 0 )
+    selectPortf <- unique(newresults()$PortfolioLabel)
+    choicesUserFriendly <- as.list(c("All Portfolios", unique(resultsFiltered$PortfolioLabel)))
+    names(choicesUserFriendly) <- c('IRB and SA', unique(resultsFiltered$PortfolioLabel))
+    # choicesUserFriendly <- unlist(choicesUserFriendly)
+  tagList(
+    if(grepl(("ING|ABN|AMRO|Banco|Santander|Barclays|Pfandbriefbank|Rabobank"),input$bankDataSelectedSidebar)){
+
+    pickerInput(inputId = "portfolioLabelDataSelectedSidebar", label = "", 
+                choices = choicesUserFriendly,
+                selected = "IRB", 
+                width = '180px', multiple = F)
+    }else{
+      pickerInput(inputId = "portfolioLabelDataSelectedSidebar", label = "", 
+                choices = unique(resultsFiltered$PortfolioLabel),
+                selected = choicesUserFriendly[1], 
+                width = '180px', multiple = F)
+    }
+  )
+})
+
+output$replineSelectionSidebarExposure <- renderUI({
+  portfolioTypeExp <- input$portfolioLabelDataSelectedSidebar
+    if(portfolioTypeExp == "All Portfolios") 
+      portfolioTypeExp <- unique(results()$PortfolioLabel)
+  resultsFilteredExp <- results()[Country %in% input$countryDataSelectedSidebar &
+                                    PortfolioLabel %in% portfolioTypeExp, ]
+  selectExp <- unique(resultsFilteredExp$ExposureReduced)[1]
+  if(input$runBalanceSheetProjection != 0 )
+    selectExp <- intersect(unique(newresults()$ExposureReduced),
+                           unique(resultsFilteredExp$ExposureReduced)) 
+  tagList(
+    pickerInput(inputId = "exposureReducedDataSelectedSidebar", label = "", 
+                choices = c( unique(resultsFilteredExp$ExposureReduced)),
+                  #c("All Exposures", "All Corporates", "All Retail", unique(resultsFilteredExp$ExposureReduced)),
+                  selected = selectExp, width = '180px', multiple = TRUE)
+  )
+})
+
+
+selectionList <- list('ING' = 'ING Groep_EBAData2017Q2_Results.RData', 
+                      'ABN AMRO' = 'ABN AMRO Group_EBAData2017Q2_Results.RData', 
+                      'Banco Santander' = 'Banco Santander_EBAData2017Q2_Results.RData',
+                      'Barclays' = 'Barclays Plc_EBAData2017Q2_Results.RData',
+                      'Pfandbriefbank' = 'Deutsche Pfandbriefbank_EBAData2017Q2_Results.RData',
+                      'Rabobank' = 'Rabobank_EBAData2017Q2_Results.RData',
+                      'CITI INC.' = 'CITIGROUP INC._FDICData2018Q1_Results.RData',
+                      'Bank of America'= 'BANK OF AMERICA CORPORATION_FDICData2018Q1_Results.RData',            
+                      'Capital One' = 'CAPITAL ONE FINANCIAL CORPORATION_FDICData2018Q1_Results.RData',   
+                      'JPMorgan Chase & Co.' = 'JPMORGAN CHASE & CO._FDICData2018Q1_Results.RData',                 
+                      'Keycorp' = 'KEYCORP_FDICData2018Q1_Results.RData',                              
+                      'M&T Bank'= 'M&T BANK CORPORATION_FDICData2018Q1_Results.RData',                 
+                      'PNC Financial Services'  = 'PNC FINANCIAL SERVICES GROUP, INC., THE_FDICData2018Q1_Results.RData',
+                      'Regions'  =   'REGIONS FINANCIAL CORPORATION_FDICData2018Q1_Results.RData',        
+                      'State Street'  =  'STATE STREET CORPORATION_FDICData2018Q1_Results.RData',             
+                      'Wells Fargo & Company' = 'WELLS FARGO & COMPANY_FDICData2018Q1_Results.RData')
+
+HTML('<h4 style="color: white;">Global Filters</h4>')
+pickerInput(inputId = "bankDataSelectedSidebar", label = "", choices = selectionList, selected = selectionList[1], width = '180px', multiple = F)
+uiOutput(outputId = "replineSelectionSidebarCountry")
+uiOutput(outputId = "replineSelectionSidebarPortfolio")
+uiOutput(outputId = "replineSelectionSidebarExposure")
+# br()
+# actionButton(inputId = "applyGlobalFilter", label = "Apply Global Filters", style="color: #fff; background-color: green; border-color: green; width: 180px;")
+```
+
+</div>
+</div>
+
+```{r}
+
+newresults <- eventReactive(input$runBalanceSheetProjection,{
+  portfolios <- input$portfolioLabelDataSelectedSidebar
+  if(portfolios == "All Portfolios"){ portfolios <- c('IRB', 'SA') }
+  DTcpm <- manipulatedData()$fullData
+  DTcpm <- DTcpm[(BankNameShort %in% sub("_EBAData2017Q2_Results.RData", "",input$bankDataSelectedSidebar)| BankNameShort %in% sub("_FDICData2018Q1_Results.RData", "",input$bankDataSelectedSidebar))
+    #BankNameShort == sub( "_EBAData2017Q2_Results.RData", "" ,input$bankDataSelectedSidebar)
+                 & Country %in% input$countryDataSelectedSidebar 
+                 & PortfolioLabel  %in% portfolios
+                 & ExposureReduced %in% input$exposureReducedDataSelectedSidebar]
+  tmp_firsSnapshot <- inputsOriginal[(BankNameShort %in% sub("_EBAData2017Q2_Results.RData", "",input$bankDataSelectedSidebar)| BankNameShort %in% sub("_FDICData2018Q1_Results.RData", "",input$bankDataSelectedSidebar))
+                            #BankNameShort == sub( "_EBAData2017Q2_Results.RData", "" ,input$bankDataSelectedSidebar)
+                             & Country %in% input$countryDataSelectedSidebar 
+                             & PortfolioLabel  %in% portfolios
+                             & ExposureReduced %in% input$exposureReducedDataSelectedSidebar]
+  subSelect <- rbind(DTcpm,tmp_firsSnapshot)[duplicated(rbind(DTcpm,tmp_firsSnapshot))
+                                             ][ , LoanIdentifier]
+  manipulatedResults <- data.table()
+
+     if(grepl(("ING|ABN|AMRO|Banco|Santander|Barclays|Pfandbriefbank|Rabobank"),input$bankDataSelectedSidebar)){
+     if(nrow(DTcpm[! LoanIdentifier %in% subSelect])>0){
+       
+       manipulatedResults <- runCPMcalculations( DTcpm[! LoanIdentifier %in% subSelect],macroDataTable, workingDirectory, input$wholesaleAssetCorrelation, input$wholesaleLGDCorrelation,
+                                                 input$retailAssetCorrelation, input$retailLGDCorrelation)
+   }
+     }else{
+     if(nrow(DTcpm[! LoanIdentifier %in% subSelect])>0){
+       
+       manipulatedResults <- runCPMcalculations_US( DTcpm[! LoanIdentifier %in% subSelect],macroDataTable, workingDirectory)
+   }
+     }
+  
+  beep(paste0(getwd(),'/OSISsounds/Calculations Finished Long.wav'))
+  Sys.sleep(3)
+
+  rm(tmp_firsSnapshot)
+  rm(subSelect)
+  return(manipulatedResults)
+},ignoreNULL = FALSE)
+# selected bank's (sidebar element above) data
+results <- reactive({
+  resultsTotal <- NULL # to be binded together
+  for (bankData in input$bankDataSelectedSidebar){
+    if(input$runBalanceSheetProjection == 0){
+      load(paste0('./RData/', bankData))
+    }else{
+      
+      load(paste0('./RData/', bankData))
+      resultsSliced <- results[!LoanIdentifier %in% unique(newresults()$LoanIdentifier)]
+      results <- rbind(newresults(), resultsSliced)
+    }
+  
+    if (is.null(resultsTotal)){
+      resultsTotal <- results
+       showNotification("Loading and appending bank data...", type = "message")
+    } else {
+      resultsTotal <- rbind(resultsTotal, results[, c(colnames(results) %in% colnames(resultsTotal)), with = FALSE], fill = TRUE)
+    }
+
+  }
+  
+  return(resultsTotal)  
+})
+
+
+resultsFiltered <- reactive({
+  
+  portfolioType <- input$portfolioLabelDataSelectedSidebar
+  if (portfolioType == "All Portfolios"){
+    portfolioType <- unique(results()[Country %in% input$countryDataSelectedSidebar, PortfolioLabel])
+  } 
+ 
+  return(
+    results()[Country %in% input$countryDataSelectedSidebar & PortfolioLabel %in% portfolioType & ExposureReduced %in% input$exposureReducedDataSelectedSidebar, ]
+    
+  )
+})
+
+
+observeEvent(input$applyGlobalFilter, {
+  showNotification("Applying global filter to dashboard...", type = "message")
+})
+
+```
+
+<div class="grid-container">
+<div>
+
+```{r}
+
+# styles.css contains a reference to the inputId, with which we change the width
+dropdown(inputId = 'correlationDropdown', 
+         label = HTML('Correlations'),
+         uiOutput(outputId = "correlationParameters"),
+         circle = TRUE
+)
+
+output$correlationParameters <- renderUI({
+  tagList(
+    numericInput(inputId = "wholesaleAssetCorrelation", 'Corp. Asset Corr.' , value = 0.20,step = 0.01, width = '160'),
+    numericInput(inputId = "wholesaleLGDCorrelation", 'Corp. LGD Corr.', value = 0.02,step = 0.01, width = '160'),
+    numericInput(inputId = "retailAssetCorrelation", 'Retail Asset Corr.', value = 0.08,step = 0.01, width = '160'),
+    numericInput(inputId = "retailLGDCorrelation", 'Retail LGD Corr.', value = 0.02, step = 0.01, width = '160'),
+  br(),
+  actionButton("correlationsButton", "Confirm changes", style="color: #fff; background-color: green; border-color: green; width: 150px;")
+  )
+})
+
+outputOptions(x = output, name = "correlationParameters", suspendWhenHidden = FALSE)
+
+```
+
+</div>
+</div>
+
+<div class="grid-container">
+<div>
+
+```{r}
+div(style="display: center;", downloadButton('downloadInputs', label = 'Input Data (csv)', style="color: #fff; background-color: #428bca; border-color: #428bca; width: 180px;"))
+
+# Downloadable csv of selected dataset ----
+output$downloadInputs <- downloadHandler(
+  filename = function() {
+    "inputData.csv"
+  },
+  content = function(file) {
+    write.csv(manipulatedData()$fullData, file, row.names = FALSE)
+  }
+)
+
+```
+
+</div>
+</div>
+
+<div class="grid-container">
+<div>
+
+```{r}
+div(style="display: center;", downloadButton('downloadResults', label = 'Results Table (csv)', style="color: #fff; background-color: #428bca; border-color: #428bca; width: 180px;"))
+
+# Downloadable csv of selected dataset ----
+output$downloadResults <- downloadHandler(
+  filename = function() {
+    "resultsTable.csv"
+  },
+  content = function(file) {
+    write.csv(resultsFiltered(), file, row.names = FALSE)
+  }
+)
+
+```
+
+</div>
+</div>
+
+<div class="grid-container">
+<div>
+
+```{r}
+div(style="display: center;", 
+      actionButton('runBalanceSheetProjection', label = 'Run Projections', style="color: #fff; background-color: green; border-color: green; width: 180px;")
+    )
+
+addTooltip(session, id = 'runBalanceSheetProjection', title = "To avoid lenghty calculation, please make bank, country and exposure selection as detailed as possible.", placement = "bottom", trigger = "hover", options = NULL)
+
+div(style="display: center; color: red", 
+      textOutput("cpmFlag")
+    )
+div(style="display: center; color: red", 
+      textOutput("cpmFlag_correlations")
+    )
+
+observeEvent(input$renewValue, {
+  output$cpmFlag <- renderText({"WARNING: inputs have been changed. Please run projections to display up-to-date results."})
+})
+observeEvent(input$renewValueNPI, {
+  output$cpmFlag <- renderText({"WARNING: inputs have been changed. Please run projections to display up-to-date results."})
+})
+observeEvent(input$runBalanceSheetProjection, {
+  output$cpmFlag <- renderText({""})
+})
+observeEvent(input$correlationsButton, {
+  output$cpmFlag_correlations <- renderText({"WARNING: correlations have been changed. Please run projections to display up-to-date results."})
+  
+})
+observeEvent(input$runBalanceSheetProjection, {
+  output$cpmFlag_correlations <- renderText({""})
+})
+
+```
+
+
+</div>
+</div>
+
+
+
+
+```{r, child="Modules/introduction/_introduction.Rmd"}
+```
+
+<!-- ```{r, child="Modules/bankHistory_US/_bankHistory_US.Rmd"} -->
+<!-- ``` -->
+
+```{r, child="Modules/bankHistory/_bankHistory.Rmd"}
+```
+
+```{r, child="subModules/modifyInputs.Rmd"}
+```
+ <!-- current portfolio overview, not renaming (yet) to avoid conflicts.. -->
+```{r, child="Modules/bankDataOverview/_bankDataOverview.Rmd"}
+```
+
+```{r, child="Modules/newProductionInputs/_newProductionInputs.Rmd"}
+```
+
+```{r, child="Modules/ratingsRWA/_ratingsRWA.Rmd"}
+```
+
+```{r, child="Modules/ECL/_expectedCreditLosses.Rmd"}
+```
+
+```{r, child="Modules/bankCAPLGraphing/_bankCAPLGraphing.Rmd"}
+```
+```{r, child="Modules/bankCAPLTable/_bankCAPLTable.Rmd"}
+```
+
+```{r, child="Modules/macroFancharts/_macroFancharts.Rmd"}
+```
+
+```{r, child="Modules/creditModel/_creditModel.Rmd"}
+```
+
+
+```{r}
+beep(paste0(getwd(),'/OSISsounds/Starting Sound Long.wav'))
+Sys.sleep(3)
+```
